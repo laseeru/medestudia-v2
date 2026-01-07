@@ -1,0 +1,124 @@
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+type Language = 'es' | 'en';
+
+interface Translations {
+  [key: string]: {
+    es: string;
+    en: string;
+  };
+}
+
+const translations: Translations = {
+  // Navigation
+  home: { es: 'Inicio', en: 'Home' },
+  preclinical: { es: 'Preclínico', en: 'Preclinical' },
+  clinical: { es: 'Clínico', en: 'Clinical' },
+  
+  // Homepage
+  heroTitle: { es: 'Educación Médica para Cuba', en: 'Medical Education for Cuba' },
+  heroSubtitle: { 
+    es: 'Plataforma de apoyo educativo y guías clínicas impulsada por inteligencia artificial', 
+    en: 'AI-powered educational support and clinical guidelines platform' 
+  },
+  selectPath: { es: 'Selecciona tu camino', en: 'Select your path' },
+  preclinicalDesc: { es: 'Ciencias básicas y formación médica temprana', en: 'Basic sciences and early medical training' },
+  clinicalDesc: { es: 'Estudio clínico y referencia de guías', en: 'Clinical study and guideline reference' },
+  
+  // Preclinical subjects
+  anatomy: { es: 'Anatomía', en: 'Anatomy' },
+  histology: { es: 'Histología y Embriología', en: 'Histology & Embryology' },
+  cellBiology: { es: 'Biología Celular y Molecular', en: 'Cell & Molecular Biology' },
+  biochemistry: { es: 'Bioquímica', en: 'Biochemistry' },
+  physiology: { es: 'Fisiología', en: 'Physiology' },
+  microbiology: { es: 'Microbiología', en: 'Microbiology' },
+  parasitology: { es: 'Parasitología', en: 'Parasitology' },
+  immunology: { es: 'Inmunología', en: 'Immunology' },
+  biostatistics: { es: 'Bioestadística / Metodología', en: 'Biostatistics / Methodology' },
+  pharmacology: { es: 'Farmacología', en: 'Pharmacology' },
+  
+  // Clinical modes
+  clinicalStudy: { es: 'Estudio Clínico', en: 'Clinical Study' },
+  clinicalGuidelines: { es: 'Guías Clínicas', en: 'Clinical Guidelines' },
+  clinicalStudyDesc: { es: 'Preparación educativa para rotaciones y exámenes', en: 'Educational preparation for rotations and exams' },
+  clinicalGuidelinesDesc: { es: 'Navegación estructurada de guías clínicas', en: 'Structured navigation of clinical guidelines' },
+  
+  // Clinical rotations
+  internalMedicine: { es: 'Medicina Interna', en: 'Internal Medicine' },
+  surgery: { es: 'Cirugía', en: 'Surgery' },
+  pediatrics: { es: 'Pediatría', en: 'Pediatrics' },
+  gynecology: { es: 'Ginecología y Obstetricia', en: 'Gynecology & Obstetrics' },
+  generalMedicine: { es: 'Medicina General Integral', en: 'Comprehensive General Medicine' },
+  
+  // Systems
+  cardiovascular: { es: 'Cardiovascular', en: 'Cardiovascular' },
+  respiratory: { es: 'Respiratorio', en: 'Respiratory' },
+  endocrine: { es: 'Endocrino', en: 'Endocrine' },
+  gastrointestinal: { es: 'Gastrointestinal', en: 'Gastrointestinal' },
+  neurological: { es: 'Neurológico', en: 'Neurological' },
+  renal: { es: 'Renal', en: 'Renal' },
+  
+  // AI & Chat
+  aiAssistant: { es: 'Asistente IA', en: 'AI Assistant' },
+  typeMessage: { es: 'Escribe tu pregunta...', en: 'Type your question...' },
+  send: { es: 'Enviar', en: 'Send' },
+  educationalUse: { es: 'Uso educativo', en: 'Educational use' },
+  educationalModeBanner: { 
+    es: 'Modo educativo — no destinado a la toma de decisiones clínicas reales', 
+    en: 'Educational mode — not intended for real clinical decision-making' 
+  },
+  
+  // Guidelines gate
+  guidelinesDisclaimer: { 
+    es: 'Esta herramienta ofrece apoyo basado en guías clínicas. No sustituye el juicio profesional.', 
+    en: 'This tool provides support based on clinical guidelines. It does not replace professional judgment.' 
+  },
+  understand: { es: 'Entiendo', en: 'I understand' },
+  
+  // Status
+  online: { es: 'En línea', en: 'Online' },
+  limited: { es: 'Limitado', en: 'Limited' },
+  offline: { es: 'Sin conexión', en: 'Offline' },
+  
+  // Footer
+  prototypeNotice: { 
+    es: 'Versión prototipo: el contenido mostrado es representativo. Los planes de estudio y guías clínicas oficiales cubanas se integrarán tras la aprobación institucional.', 
+    en: 'Prototype version: the content shown is representative. Official Cuban curricula and clinical guidelines will be integrated after institutional approval.' 
+  },
+  
+  // Common
+  back: { es: 'Volver', en: 'Back' },
+  continue: { es: 'Continuar', en: 'Continue' },
+  select: { es: 'Seleccionar', en: 'Select' },
+  loading: { es: 'Cargando...', en: 'Loading...' },
+};
+
+interface LanguageContextType {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string) => string;
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [language, setLanguage] = useState<Language>('es');
+
+  const t = (key: string): string => {
+    return translations[key]?.[language] || key;
+  };
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+};
+
+export const useLanguage = () => {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
+};
