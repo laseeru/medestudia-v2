@@ -12,70 +12,18 @@
     --medical-red-dark: 0 72% 40%;
     
     /* Academic Blue - from logo book */
-    --academic-blue: 210 100% 45%;
+    --academic-blue: 210 100% 50%;
     --academic-blue-light: 190 85% 55%;
     --academic-blue-dark: 210 100% 35%;
     
-    /* Core semantic tokens */
-    --background: 210 20% 98%;
-    --foreground: 220 25% 15%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 15%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 15%;
-
-    --primary: 0 72% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 210 100% 45%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 210 15% 94%;
-    --muted-foreground: 220 15% 45%;
-
-    --accent: 190 85% 55%;
-    --accent-foreground: 220 25% 15%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 210 20% 88%;
-    --input: 210 20% 88%;
-    --ring: 210 100% 45%;
-
-    --radius: 0.75rem;
-
-    /* Custom gradients */
-    --gradient-medical: linear-gradient(135deg, hsl(var(--medical-red)) 0%, hsl(var(--medical-red-dark)) 100%);
-    --gradient-academic: linear-gradient(135deg, hsl(var(--academic-blue-light)) 0%, hsl(var(--academic-blue)) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(210 20% 98%) 0%, hsl(210 25% 95%) 100%);
-    
-    /* Shadows */
-    --shadow-soft: 0 2px 8px -2px hsl(220 25% 15% / 0.08);
-    --shadow-card: 0 4px 16px -4px hsl(220 25% 15% / 0.1);
-    --shadow-elevated: 0 8px 32px -8px hsl(220 25% 15% / 0.15);
-
-    /* Sidebar tokens */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 25% 15%;
-    --sidebar-primary: 210 100% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 15% 94%;
-    --sidebar-accent-foreground: 220 25% 15%;
-    --sidebar-border: 210 20% 88%;
-    --sidebar-ring: 210 100% 45%;
-  }
-
-  .dark {
-    --background: 220 25% 10%;
+    /* Dark mode only - Core semantic tokens */
+    --background: 220 25% 8%;
     --foreground: 210 20% 95%;
 
-    --card: 220 25% 13%;
+    --card: 220 25% 11%;
     --card-foreground: 210 20% 95%;
 
-    --popover: 220 25% 13%;
+    --popover: 220 25% 11%;
     --popover-foreground: 210 20% 95%;
 
     --primary: 0 72% 55%;
@@ -84,8 +32,8 @@
     --secondary: 210 100% 50%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 20% 20%;
-    --muted-foreground: 210 15% 65%;
+    --muted: 220 20% 16%;
+    --muted-foreground: 210 15% 60%;
 
     --accent: 190 85% 50%;
     --accent-foreground: 0 0% 100%;
@@ -93,17 +41,36 @@
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    --border: 220 20% 18%;
+    --input: 220 20% 18%;
     --ring: 210 100% 50%;
 
-    --sidebar-background: 220 25% 12%;
+    --radius: 0.75rem;
+
+    /* Custom gradients */
+    --gradient-medical: linear-gradient(135deg, hsl(var(--medical-red)) 0%, hsl(var(--medical-red-dark)) 100%);
+    --gradient-academic: linear-gradient(135deg, hsl(var(--academic-blue-light)) 0%, hsl(var(--academic-blue)) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(220 25% 8%) 0%, hsl(220 25% 6%) 100%);
+    
+    /* Shadows */
+    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-card: 0 4px 16px -4px hsl(0 0% 0% / 0.4);
+    --shadow-elevated: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
+
+    /* Sidebar tokens */
+    --sidebar-background: 220 25% 10%;
     --sidebar-foreground: 210 20% 95%;
     --sidebar-primary: 210 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 18%;
+    --sidebar-accent: 220 20% 16%;
     --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 20% 20%;
+    --sidebar-border: 220 20% 18%;
     --sidebar-ring: 210 100% 50%;
   }
 }

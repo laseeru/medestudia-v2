@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   Bone, 
   Microscope, 
@@ -16,7 +15,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SubjectTile from '@/components/SubjectTile';
-import ChatInterface from '@/components/ChatInterface';
+import StudyToolSelector, { StudyTool } from '@/components/StudyToolSelector';
+import MCQGenerator from '@/components/MCQGenerator';
+import QuickQuiz from '@/components/QuickQuiz';
+import TopicExplainer from '@/components/TopicExplainer';
+import ScoreStats from '@/components/ScoreStats';
 
 const preclinicalSubjects = [
   { key: 'anatomy', icon: Bone },
@@ -32,12 +35,33 @@ const preclinicalSubjects = [
 ];
 
 const Preclinical: React.FC = () => {
-  const navigate = useNavigate();
   const { t } = useLanguage();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedTool, setSelectedTool] = useState<StudyTool | null>(null);
 
-  const handleSubjectSelect = (subjectKey: string) => {
-    setSelectedSubject(subjectKey);
+  const handleBack = () => {
+    if (selectedTool) {
+      setSelectedTool(null);
+    } else {
+      setSelectedSubject(null);
+    }
+  };
+
+  const renderStudyTool = () => {
+    const subject = t(selectedSubject!);
+    
+    switch (selectedTool) {
+      case 'mcq':
+        return <MCQGenerator subject={subject} variant="preclinical" />;
+      case 'quiz':
+        return <QuickQuiz subject={subject} mode="preclinical" variant="preclinical" />;
+      case 'explain':
+        return <TopicExplainer subject={subject} mode="preclinical" variant="preclinical" />;
+      case 'stats':
+        return <ScoreStats variant="preclinical" />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -55,6 +79,15 @@ const Preclinical: React.FC = () => {
           </p>
         </div>
 
+        {/* Educational Disclaimer */}
+        <div className="max-w-3xl mx-auto mb-8">
+          <div className="bg-academic/10 border border-academic/30 rounded-lg px-4 py-3 text-center">
+            <p className="text-sm text-academic font-medium">
+              {t('educationalUse')}
+            </p>
+          </div>
+        </div>
+
         {!selectedSubject ? (
           /* Subject Grid */
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-5xl mx-auto animate-fade-in">
@@ -63,17 +96,17 @@ const Preclinical: React.FC = () => {
                 key={subject.key}
                 title={t(subject.key)}
                 icon={<subject.icon className="h-6 w-6" />}
-                onClick={() => handleSubjectSelect(subject.key)}
+                onClick={() => setSelectedSubject(subject.key)}
                 variant="preclinical"
               />
             ))}
           </div>
-        ) : (
-          /* Chat Interface */
-          <div className="max-w-3xl mx-auto space-y-4 animate-fade-in">
+        ) : !selectedTool ? (
+          /* Study Tool Selection */
+          <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
               <button
-                onClick={() => setSelectedSubject(null)}
+                onClick={handleBack}
                 className="text-sm text-academic hover:underline flex items-center gap-1"
               >
                 ← {t('back')}
@@ -82,7 +115,33 @@ const Preclinical: React.FC = () => {
                 {t(selectedSubject)}
               </span>
             </div>
-            <ChatInterface mode="preclinical" subject={t(selectedSubject)} />
+            
+            <h2 className="text-lg font-medium text-center text-muted-foreground">
+              {t('selectStudyTool')}
+            </h2>
+            
+            <StudyToolSelector
+              selectedTool={selectedTool}
+              onSelectTool={setSelectedTool}
+              variant="preclinical"
+            />
+          </div>
+        ) : (
+          /* Active Study Tool */
+          <div className="max-w-3xl mx-auto space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={handleBack}
+                className="text-sm text-academic hover:underline flex items-center gap-1"
+              >
+                ← {t('back')}
+              </button>
+              <span className="text-sm font-medium text-foreground">
+                {t(selectedSubject)}
+              </span>
+            </div>
+            
+            {renderStudyTool()}
           </div>
         )}
       </main>

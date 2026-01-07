@@ -12,7 +12,7 @@ const Index: React.FC = () => {
   const { t } = useLanguage();
 
   return (
-    <div className="flex min-h-screen flex-col gradient-hero">
+    <div className="flex min-h-screen flex-col bg-background">
       <Header />
       
       <main className="flex-1 container py-12 md:py-20">
