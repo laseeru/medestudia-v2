@@ -91,6 +91,59 @@ const translations: Translations = {
   continue: { es: 'Continuar', en: 'Continue' },
   select: { es: 'Seleccionar', en: 'Select' },
   loading: { es: 'Cargando...', en: 'Loading...' },
+
+  // Study Tools
+  generateMCQ: { es: 'Generar MCQ', en: 'Generate MCQ' },
+  generateMCQDesc: { es: 'Pregunta de opción múltiple', en: 'Multiple choice question' },
+  quickQuiz: { es: 'Quiz Rápido', en: 'Quick Quiz' },
+  quickQuizDesc: { es: '5 preguntas con puntuación', en: '5 questions with score' },
+  explainTopic: { es: 'Explicar Tema', en: 'Explain Topic' },
+  explainTopicDesc: { es: 'Explicación estructurada', en: 'Structured explanation' },
+  viewStats: { es: 'Estadísticas', en: 'Statistics' },
+  viewStatsDesc: { es: 'Tu historial de estudio', en: 'Your study history' },
+  selectStudyTool: { es: 'Selecciona una herramienta de estudio', en: 'Select a study tool' },
+
+  // MCQ Generator
+  topicOptional: { es: 'Tema (opcional)', en: 'Topic (optional)' },
+  topicPlaceholder: { es: 'Ej: sistema cardiovascular', en: 'E.g.: cardiovascular system' },
+  difficulty: { es: 'Dificultad', en: 'Difficulty' },
+  easy: { es: 'Fácil', en: 'Easy' },
+  medium: { es: 'Medio', en: 'Medium' },
+  hard: { es: 'Difícil', en: 'Hard' },
+  generateQuestion: { es: 'Generar Pregunta', en: 'Generate Question' },
+  generating: { es: 'Generando...', en: 'Generating...' },
+  explanation: { es: 'Explicación', en: 'Explanation' },
+
+  // Quick Quiz
+  quickQuizIntro: { es: '5 preguntas aleatorias para evaluar tu conocimiento', en: '5 random questions to test your knowledge' },
+  startQuiz: { es: 'Iniciar Quiz', en: 'Start Quiz' },
+  question: { es: 'Pregunta', en: 'Question' },
+  nextQuestion: { es: 'Siguiente', en: 'Next' },
+  finishQuiz: { es: 'Finalizar', en: 'Finish' },
+  excellent: { es: '¡Excelente!', en: 'Excellent!' },
+  good: { es: '¡Buen trabajo!', en: 'Good job!' },
+  keepPracticing: { es: 'Sigue practicando', en: 'Keep practicing' },
+  correct: { es: 'correctas', en: 'correct' },
+  tryAgain: { es: 'Intentar de nuevo', en: 'Try Again' },
+
+  // Topic Explainer
+  enterTopic: { es: 'Ingresa un tema para explicar', en: 'Enter a topic to explain' },
+  topicExamplePlaceholder: { es: 'Ej: diabetes mellitus tipo 2', en: 'E.g.: type 2 diabetes mellitus' },
+  definition: { es: 'Definición', en: 'Definition' },
+  keyFeatures: { es: 'Características clave', en: 'Key Features' },
+  diagnosticOverview: { es: 'Panorama diagnóstico', en: 'Diagnostic Overview' },
+  lowResourceConsiderations: { es: 'Consideraciones para recursos limitados', en: 'Low-Resource Considerations' },
+  enterTopicPrompt: { es: 'Ingresa un tema arriba para obtener una explicación estructurada', en: 'Enter a topic above to get a structured explanation' },
+  representativeContent: { es: 'Contenido educativo representativo', en: 'Representative educational content' },
+
+  // Score Stats
+  noStatsYet: { es: 'Sin estadísticas aún', en: 'No stats yet' },
+  completeQuizPrompt: { es: 'Completa un quiz para ver tus estadísticas aquí', en: 'Complete a quiz to see your stats here' },
+  quizzesTaken: { es: 'Quizzes realizados', en: 'Quizzes taken' },
+  accuracy: { es: 'Precisión', en: 'Accuracy' },
+  avgScore: { es: 'Promedio', en: 'Average' },
+  recentResults: { es: 'Resultados recientes', en: 'Recent Results' },
+  clearHistory: { es: 'Borrar historial', en: 'Clear history' },
 };
 
 interface LanguageContextType {

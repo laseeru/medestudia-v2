@@ -15,7 +15,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SubjectTile from '@/components/SubjectTile';
-import ChatInterface from '@/components/ChatInterface';
+import StudyToolSelector, { StudyTool } from '@/components/StudyToolSelector';
+import MCQGenerator from '@/components/MCQGenerator';
+import QuickQuiz from '@/components/QuickQuiz';
+import TopicExplainer from '@/components/TopicExplainer';
+import ScoreStats from '@/components/ScoreStats';
 
 const rotations = [
   { key: 'internalMedicine', icon: Heart },
@@ -38,12 +42,39 @@ const ClinicalStudy: React.FC = () => {
   const { t } = useLanguage();
   const [selectedRotation, setSelectedRotation] = useState<string | null>(null);
   const [selectedSystem, setSelectedSystem] = useState<string | null>(null);
+  const [selectedTool, setSelectedTool] = useState<StudyTool | null>(null);
 
   const handleBack = () => {
-    if (selectedSystem) {
+    if (selectedTool) {
+      setSelectedTool(null);
+    } else if (selectedSystem) {
       setSelectedSystem(null);
     } else {
       setSelectedRotation(null);
+    }
+  };
+
+  const getSubjectLabel = () => {
+    if (selectedSystem) {
+      return `${t(selectedRotation!)} - ${t(selectedSystem)}`;
+    }
+    return t(selectedRotation!);
+  };
+
+  const renderStudyTool = () => {
+    const subject = getSubjectLabel();
+    
+    switch (selectedTool) {
+      case 'mcq':
+        return <MCQGenerator subject={subject} variant="clinical" />;
+      case 'quiz':
+        return <QuickQuiz subject={subject} mode="clinical-study" variant="clinical" />;
+      case 'explain':
+        return <TopicExplainer subject={subject} mode="clinical-study" variant="clinical" />;
+      case 'stats':
+        return <ScoreStats variant="clinical" />;
+      default:
+        return null;
     }
   };
 
@@ -64,8 +95,8 @@ const ClinicalStudy: React.FC = () => {
 
         {/* Educational Banner */}
         <div className="max-w-3xl mx-auto mb-8">
-          <div className="bg-academic/10 border border-academic/30 rounded-lg px-4 py-3 text-center">
-            <p className="text-sm text-academic-dark font-medium">
+          <div className="bg-medical/10 border border-medical/30 rounded-lg px-4 py-3 text-center">
+            <p className="text-sm text-medical font-medium">
               {t('educationalModeBanner')}
             </p>
           </div>
@@ -118,8 +149,33 @@ const ClinicalStudy: React.FC = () => {
               ))}
             </div>
           </div>
+        ) : !selectedTool ? (
+          /* Study Tool Selection */
+          <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={handleBack}
+                className="text-sm text-medical hover:underline flex items-center gap-1"
+              >
+                ← {t('back')}
+              </button>
+              <span className="text-sm font-medium text-foreground">
+                {getSubjectLabel()}
+              </span>
+            </div>
+            
+            <h2 className="text-lg font-medium text-center text-muted-foreground">
+              {t('selectStudyTool')}
+            </h2>
+            
+            <StudyToolSelector
+              selectedTool={selectedTool}
+              onSelectTool={setSelectedTool}
+              variant="clinical"
+            />
+          </div>
         ) : (
-          /* Chat Interface */
+          /* Active Study Tool */
           <div className="max-w-3xl mx-auto space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
               <button
@@ -129,13 +185,11 @@ const ClinicalStudy: React.FC = () => {
                 ← {t('back')}
               </button>
               <span className="text-sm font-medium text-foreground">
-                {t(selectedRotation)} → {t(selectedSystem)}
+                {getSubjectLabel()}
               </span>
             </div>
-            <ChatInterface 
-              mode="clinical-study" 
-              subject={`${t(selectedRotation)} - ${t(selectedSystem)}`} 
-            />
+            
+            {renderStudyTool()}
           </div>
         )}
       </main>
