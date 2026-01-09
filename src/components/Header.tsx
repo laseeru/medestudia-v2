@@ -32,13 +32,15 @@ const Header: React.FC = () => {
           )}
           <button 
             onClick={() => navigate('/')}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-90 transition-opacity"
           >
-            <img 
-              src={logoImage} 
-              alt="MedEstudia" 
-              className="h-8 w-auto"
-            />
+            <div className="p-1.5 bg-card/50 rounded-xl border border-border/50">
+              <img 
+                src={logoImage} 
+                alt="MedEstudia" 
+                className="h-7 w-auto rounded-lg"
+              />
+            </div>
           </button>
         </div>
 

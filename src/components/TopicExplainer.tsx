@@ -17,42 +17,67 @@ interface Explanation {
   lowResourceConsiderations?: string;
 }
 
+// Context-aware placeholder examples
+const placeholderExamples: Record<string, { es: string; en: string }> = {
+  // Preclinical
+  anatomy: { es: 'Ej: plexo braquial, polígono de Willis', en: 'E.g.: brachial plexus, circle of Willis' },
+  histology: { es: 'Ej: tejido cartilaginoso, epitelio respiratorio', en: 'E.g.: cartilaginous tissue, respiratory epithelium' },
+  physiology: { es: 'Ej: curva de Frank-Starling, equilibrio ácido-base', en: 'E.g.: Frank-Starling curve, acid-base balance' },
+  biochemistry: { es: 'Ej: ciclo de Krebs, síntesis de proteínas', en: 'E.g.: Krebs cycle, protein synthesis' },
+  pharmacology: { es: 'Ej: mecanismo de acción de los IECA', en: 'E.g.: ACE inhibitor mechanism of action' },
+  // Clinical
+  cardiovascular: { es: 'Ej: fisiopatología de la hipertensión', en: 'E.g.: pathophysiology of hypertension' },
+  respiratory: { es: 'Ej: síndrome de distrés respiratorio', en: 'E.g.: respiratory distress syndrome' },
+  pediatrics: { es: 'Ej: desarrollo psicomotor, lactancia materna', en: 'E.g.: psychomotor development, breastfeeding' },
+};
+
 const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant = 'preclinical' }) => {
   const { t, language } = useLanguage();
   const [topic, setTopic] = useState('');
   const [explanation, setExplanation] = useState<Explanation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Get context-aware placeholder
+  const getPlaceholder = () => {
+    const found = Object.entries(placeholderExamples).find(([k]) => 
+      subject.toLowerCase().includes(k) || subject.toLowerCase().includes(t(k).toLowerCase())
+    );
+    return found ? found[1][language] : t('topicExamplePlaceholder');
+  };
+
   const generateMockExplanation = (): Explanation => {
+    // Generate explanation that references the user's query
+    const userTopic = topic.trim();
+    
     if (language === 'es') {
       return {
-        definition: `${topic || subject} es un concepto fundamental en medicina que abarca múltiples aspectos de la práctica clínica y la investigación. Su comprensión es esencial para el diagnóstico y tratamiento adecuado de diversas condiciones médicas. [Contenido representativo]`,
+        definition: `${userTopic} es un tema fundamental en ${subject}. Su comprensión permite integrar conceptos básicos con aplicaciones clínicas relevantes para la práctica médica en el contexto cubano y latinoamericano. Este contenido es representativo y será actualizado con material curricular oficial.`,
         keyFeatures: [
-          'Mecanismo fisiopatológico principal y su relevancia clínica',
-          'Manifestaciones clínicas características y presentación típica',
-          'Métodos diagnósticos recomendados según recursos disponibles',
-          'Opciones terapéuticas basadas en evidencia actual',
-          'Consideraciones especiales para poblaciones vulnerables',
+          `Bases fisiopatológicas de ${userTopic} y su relevancia clínica`,
+          'Manifestaciones clínicas características según la presentación típica regional',
+          'Métodos diagnósticos recomendados considerando disponibilidad de recursos',
+          'Opciones terapéuticas basadas en guías OPS/OMS adaptadas al contexto local',
+          'Consideraciones especiales para poblaciones vulnerables en el entorno cubano',
         ],
         diagnosticOverview: mode === 'clinical-study'
-          ? 'El enfoque diagnóstico debe incluir una historia clínica detallada, examen físico completo y estudios complementarios según disponibilidad. La correlación clínico-patológica es fundamental para un diagnóstico preciso.'
+          ? `El enfoque diagnóstico de ${userTopic} debe priorizar la historia clínica detallada y el examen físico como herramientas fundamentales, especialmente en atención primaria. Los estudios complementarios deben solicitarse de manera racional según disponibilidad y necesidad clínica.`
           : undefined,
-        lowResourceConsiderations: 'En contextos de recursos limitados, se recomienda priorizar métodos diagnósticos clínicos y utilizar escalas validadas. El juicio clínico combinado con herramientas básicas puede lograr una alta precisión diagnóstica.',
+        lowResourceConsiderations: `En el contexto de la medicina cubana, se recomienda maximizar el uso de la semiología clínica y escalas validadas para ${userTopic}. El razonamiento clínico sólido, combinado con herramientas diagnósticas básicas, permite lograr alta precisión diagnóstica incluso con recursos limitados.`,
       };
     } else {
       return {
-        definition: `${topic || subject} is a fundamental concept in medicine that encompasses multiple aspects of clinical practice and research. Its understanding is essential for proper diagnosis and treatment of various medical conditions. [Representative content]`,
+        definition: `${userTopic} is a fundamental topic in ${subject}. Its understanding allows integrating basic concepts with clinical applications relevant to medical practice in the Cuban and Latin American context. This content is representative and will be updated with official curricular material.`,
         keyFeatures: [
-          'Main pathophysiological mechanism and its clinical relevance',
-          'Characteristic clinical manifestations and typical presentation',
-          'Recommended diagnostic methods according to available resources',
-          'Evidence-based therapeutic options',
-          'Special considerations for vulnerable populations',
+          `Pathophysiological basis of ${userTopic} and its clinical relevance`,
+          'Characteristic clinical manifestations according to typical regional presentation',
+          'Recommended diagnostic methods considering resource availability',
+          'Therapeutic options based on PAHO/WHO guidelines adapted to local context',
+          'Special considerations for vulnerable populations in the Cuban setting',
         ],
         diagnosticOverview: mode === 'clinical-study'
-          ? 'The diagnostic approach should include a detailed clinical history, complete physical examination, and complementary studies as available. Clinical-pathological correlation is fundamental for accurate diagnosis.'
+          ? `The diagnostic approach to ${userTopic} should prioritize detailed clinical history and physical examination as fundamental tools, especially in primary care. Complementary studies should be requested rationally according to availability and clinical need.`
           : undefined,
-        lowResourceConsiderations: 'In low-resource settings, prioritizing clinical diagnostic methods and using validated scales is recommended. Clinical judgment combined with basic tools can achieve high diagnostic accuracy.',
+        lowResourceConsiderations: `In the context of Cuban medicine, maximizing the use of clinical semiology and validated scales for ${userTopic} is recommended. Solid clinical reasoning, combined with basic diagnostic tools, achieves high diagnostic accuracy even with limited resources.`,
       };
     }
   };
@@ -73,8 +98,10 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
     }
   };
 
-  const colorClass = variant === 'preclinical' ? 'text-academic' : 'text-medical';
-  const bgClass = variant === 'preclinical' ? 'bg-academic/10' : 'bg-medical/10';
+  // Use academic blue for both variants
+  const colorClass = 'text-academic';
+  const bgClass = 'bg-academic/10';
+  const bulletClass = 'bg-academic';
 
   return (
     <div className="space-y-6">
@@ -89,7 +116,7 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={t('topicExamplePlaceholder')}
+            placeholder={getPlaceholder()}
             className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <Button onClick={handleExplain} disabled={isLoading || !topic.trim()}>
@@ -119,7 +146,7 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
             <ul className="space-y-2">
               {explanation.keyFeatures.map((feature, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <span className={cn("mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0", variant === 'preclinical' ? 'bg-academic' : 'bg-medical')} />
+                  <span className={cn("mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0", bulletClass)} />
                   {feature}
                 </li>
               ))}

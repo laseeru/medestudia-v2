@@ -25,7 +25,7 @@ const SubjectTile: React.FC<SubjectTileProps> = ({
           "border-border hover:border-academic focus:ring-academic",
         ],
         variant === 'clinical' && [
-          "border-border hover:border-medical focus:ring-medical",
+          "border-border hover:border-academic focus:ring-academic",
         ]
       )}
     >
@@ -33,7 +33,7 @@ const SubjectTile: React.FC<SubjectTileProps> = ({
         className={cn(
           "flex h-12 w-12 items-center justify-center rounded-lg mb-3 transition-colors duration-200",
           variant === 'preclinical' && "bg-academic/10 text-academic group-hover:bg-academic group-hover:text-white",
-          variant === 'clinical' && "bg-medical/10 text-medical group-hover:bg-medical group-hover:text-white"
+          variant === 'clinical' && "bg-academic/10 text-academic group-hover:bg-academic group-hover:text-white"
         )}
       >
         {icon}

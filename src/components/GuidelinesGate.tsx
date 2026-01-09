@@ -22,8 +22,8 @@ const GuidelinesGate: React.FC<GuidelinesGateProps> = ({ onConfirm }) => {
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8 animate-fade-in">
       <div className="max-w-md text-center space-y-6">
         <div className="flex justify-center">
-          <div className="h-16 w-16 rounded-full bg-medical/10 flex items-center justify-center">
-            <AlertCircle className="h-8 w-8 text-medical" />
+          <div className="h-16 w-16 rounded-full bg-warning/10 flex items-center justify-center">
+            <AlertCircle className="h-8 w-8 text-warning" />
           </div>
         </div>
         
@@ -39,7 +39,7 @@ const GuidelinesGate: React.FC<GuidelinesGateProps> = ({ onConfirm }) => {
         <Button
           onClick={handleConfirm}
           disabled={isConfirming}
-          className="w-full gradient-medical hover:opacity-90 transition-opacity"
+          className="w-full gradient-academic hover:opacity-90 transition-opacity"
         >
           {t('understand')}
         </Button>

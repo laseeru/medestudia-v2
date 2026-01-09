@@ -82,8 +82,8 @@ const translations: Translations = {
   
   // Footer
   prototypeNotice: { 
-    es: 'Versión prototipo: el contenido mostrado es representativo. Los planes de estudio y guías clínicas oficiales cubanas se integrarán tras la aprobación institucional.', 
-    en: 'Prototype version: the content shown is representative. Official Cuban curricula and clinical guidelines will be integrated after institutional approval.' 
+    es: 'Este prototipo utiliza contenido representativo. Los documentos oficiales cubanos se integrarán posteriormente mediante técnicas de recuperación de información (RAG).', 
+    en: 'This prototype uses representative content. Official Cuban documents will be integrated later using retrieval-augmented generation (RAG) techniques.' 
   },
   
   // Common
