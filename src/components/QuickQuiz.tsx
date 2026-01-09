@@ -20,6 +20,88 @@ interface QuizQuestion {
   explanation: string;
 }
 
+// Context-aware placeholder examples
+const placeholderExamples: Record<string, { es: string; en: string }> = {
+  cardiovascular: { es: 'Ej: insuficiencia cardíaca, hipertensión', en: 'E.g.: heart failure, hypertension' },
+  respiratory: { es: 'Ej: neumonía, asma bronquial', en: 'E.g.: pneumonia, bronchial asthma' },
+  endocrine: { es: 'Ej: diabetes mellitus, tiroides', en: 'E.g.: diabetes mellitus, thyroid' },
+  gastrointestinal: { es: 'Ej: gastritis, pancreatitis', en: 'E.g.: gastritis, pancreatitis' },
+  neurological: { es: 'Ej: ACV, cefaleas', en: 'E.g.: stroke, headaches' },
+  pediatrics: { es: 'Ej: deshidratación, bronquiolitis', en: 'E.g.: dehydration, bronchiolitis' },
+};
+
+const generateRealisticQuestions = (topic: string, subject: string, language: 'es' | 'en'): QuizQuestion[] => {
+  // Cuban-context medical questions
+  const questionBanks = {
+    es: [
+      {
+        question: `En el estudio de ${topic || subject}, ¿cuál es el hallazgo clínico más frecuente?`,
+        options: ['Manifestaciones sistémicas variables', 'Síntomas localizados únicamente', 'Ausencia de signos objetivos', 'Presentación exclusivamente aguda'],
+        correctIndex: 0,
+        explanation: `Las manifestaciones de ${topic || subject} suelen ser sistémicas y variables, lo que requiere un enfoque diagnóstico integral. [Contenido educativo representativo]`,
+      },
+      {
+        question: `¿Cuál es el enfoque diagnóstico inicial más apropiado para ${topic || subject} en atención primaria?`,
+        options: ['Imagenología avanzada inmediata', 'Historia clínica y examen físico detallado', 'Derivación directa a especialista', 'Tratamiento empírico sin evaluación'],
+        correctIndex: 1,
+        explanation: `La historia clínica y el examen físico son fundamentales en el enfoque diagnóstico inicial, especialmente en contextos de atención primaria con recursos limitados.`,
+      },
+      {
+        question: `¿Qué aspecto es fundamental considerar en el manejo de ${topic || subject} en Cuba?`,
+        options: ['Disponibilidad local de medicamentos', 'Acceso a tecnología de punta', 'Protocolos extranjeros sin adaptación', 'Tratamientos de alto costo exclusivamente'],
+        correctIndex: 0,
+        explanation: `El contexto local, incluyendo la disponibilidad de medicamentos del cuadro básico, es fundamental para un manejo efectivo y realista.`,
+      },
+      {
+        question: `¿Cuál es la importancia de la medicina preventiva en relación con ${topic || subject}?`,
+        options: ['Es irrelevante para esta condición', 'Permite identificación temprana y mejor pronóstico', 'Solo aplica en hospitales terciarios', 'Aumenta costos sin beneficio claro'],
+        correctIndex: 1,
+        explanation: `La prevención y detección temprana son pilares del sistema de salud cubano, mejorando pronósticos y optimizando recursos.`,
+      },
+      {
+        question: `¿Qué recurso educativo es más útil para profundizar en ${topic || subject}?`,
+        options: ['Fuentes internacionales sin contextualización', 'Literatura médica adaptada al contexto regional', 'Solo experiencia práctica sin teoría', 'Memorización sin comprensión de conceptos'],
+        correctIndex: 1,
+        explanation: `La literatura adaptada al contexto regional permite aplicar conocimientos de manera efectiva considerando recursos y epidemiología local.`,
+      },
+    ],
+    en: [
+      {
+        question: `In studying ${topic || subject}, what is the most frequent clinical finding?`,
+        options: ['Variable systemic manifestations', 'Localized symptoms only', 'Absence of objective signs', 'Exclusively acute presentation'],
+        correctIndex: 0,
+        explanation: `Manifestations of ${topic || subject} are usually systemic and variable, requiring a comprehensive diagnostic approach. [Representative educational content]`,
+      },
+      {
+        question: `What is the most appropriate initial diagnostic approach for ${topic || subject} in primary care?`,
+        options: ['Immediate advanced imaging', 'Detailed clinical history and physical exam', 'Direct specialist referral', 'Empirical treatment without evaluation'],
+        correctIndex: 1,
+        explanation: `Clinical history and physical examination are fundamental in the initial diagnostic approach, especially in primary care settings with limited resources.`,
+      },
+      {
+        question: `What aspect is fundamental to consider in managing ${topic || subject} in Cuba?`,
+        options: ['Local medication availability', 'Access to cutting-edge technology', 'Foreign protocols without adaptation', 'High-cost treatments exclusively'],
+        correctIndex: 0,
+        explanation: `Local context, including availability of essential medications, is fundamental for effective and realistic management.`,
+      },
+      {
+        question: `What is the importance of preventive medicine in relation to ${topic || subject}?`,
+        options: ['It is irrelevant for this condition', 'Enables early identification and better prognosis', 'Only applies in tertiary hospitals', 'Increases costs without clear benefit'],
+        correctIndex: 1,
+        explanation: `Prevention and early detection are pillars of the Cuban health system, improving outcomes and optimizing resources.`,
+      },
+      {
+        question: `What educational resource is most useful for deepening knowledge of ${topic || subject}?`,
+        options: ['International sources without contextualization', 'Medical literature adapted to regional context', 'Only practical experience without theory', 'Memorization without concept understanding'],
+        correctIndex: 1,
+        explanation: `Literature adapted to regional context allows effective application of knowledge considering local resources and epidemiology.`,
+      },
+    ],
+  };
+
+  return questionBanks[language];
+};
+
 const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclinical' }) => {
   const { t, language } = useLanguage();
   const { saveResult } = useScoreTracking();
@@ -33,37 +115,18 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
   const [isFinished, setIsFinished] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const generateMockQuestions = (): QuizQuestion[] => {
-    const baseQuestions = language === 'es' ? [
-      `¿Cuál es la característica principal de ${topic || subject}?`,
-      `En el contexto de ${topic || subject}, ¿qué afirmación es correcta?`,
-      `¿Cuál es el mecanismo fundamental de ${topic || subject}?`,
-      `¿Qué factor es más importante en ${topic || subject}?`,
-      `¿Cuál es la aplicación clínica de ${topic || subject}?`,
-    ] : [
-      `What is the main characteristic of ${topic || subject}?`,
-      `In the context of ${topic || subject}, which statement is correct?`,
-      `What is the fundamental mechanism of ${topic || subject}?`,
-      `What factor is most important in ${topic || subject}?`,
-      `What is the clinical application of ${topic || subject}?`,
-    ];
-
-    return baseQuestions.map((q, i) => ({
-      question: q,
-      options: language === 'es'
-        ? [`Opción A ${i === 0 ? '(correcta)' : ''}`, `Opción B ${i === 1 ? '(correcta)' : ''}`, `Opción C ${i === 2 || i === 3 ? '(correcta)' : ''}`, `Opción D ${i === 4 ? '(correcta)' : ''}`]
-        : [`Option A ${i === 0 ? '(correct)' : ''}`, `Option B ${i === 1 ? '(correct)' : ''}`, `Option C ${i === 2 || i === 3 ? '(correct)' : ''}`, `Option D ${i === 4 ? '(correct)' : ''}`],
-      correctIndex: i === 0 ? 0 : i === 1 ? 1 : i === 4 ? 3 : 2,
-      explanation: language === 'es'
-        ? `Explicación para la pregunta ${i + 1} sobre ${topic || subject}. [Contenido educativo representativo]`
-        : `Explanation for question ${i + 1} about ${topic || subject}. [Representative educational content]`,
-    }));
+  // Get context-aware placeholder
+  const getPlaceholder = () => {
+    const found = Object.entries(placeholderExamples).find(([k]) => 
+      subject.toLowerCase().includes(k)
+    );
+    return found ? found[1][language] : t('topicPlaceholder');
   };
 
   const handleStart = () => {
     setIsLoading(true);
     setTimeout(() => {
-      setQuestions(generateMockQuestions());
+      setQuestions(generateRealisticQuestions(topic, subject, language));
       setAnswers(new Array(5).fill(null));
       setCurrentIndex(0);
       setSelectedAnswer(null);
@@ -115,7 +178,8 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
     setSelectedAnswer(null);
   };
 
-  const colorClass = variant === 'preclinical' ? 'bg-academic' : 'bg-medical';
+  // Use academic blue for both variants
+  const colorClass = 'bg-academic';
   const score = answers.reduce((acc, ans, idx) => acc + (ans === questions[idx]?.correctIndex ? 1 : 0), 0);
 
   if (!isStarted) {
@@ -134,7 +198,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder={t('topicPlaceholder')}
+              placeholder={getPlaceholder()}
               className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>

@@ -25,9 +25,10 @@ const StudyToolSelector: React.FC<StudyToolSelectorProps> = ({
     { key: 'stats' as StudyTool, icon: BarChart3, label: t('viewStats'), desc: t('viewStatsDesc') },
   ];
 
-  const colorClass = variant === 'preclinical' ? 'text-academic' : 'text-medical';
-  const bgClass = variant === 'preclinical' ? 'bg-academic/10 border-academic/30' : 'bg-medical/10 border-medical/30';
-  const selectedBg = variant === 'preclinical' ? 'bg-academic/20 border-academic' : 'bg-medical/20 border-medical';
+  // Use same academic blue for both variants
+  const colorClass = 'text-academic';
+  const bgClass = 'bg-academic/10 border-academic/30';
+  const selectedBg = 'bg-academic/20 border-academic';
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

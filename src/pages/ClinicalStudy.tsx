@@ -93,13 +93,12 @@ const ClinicalStudy: React.FC = () => {
           </p>
         </div>
 
-        {/* Educational Banner */}
-        <div className="max-w-3xl mx-auto mb-8">
-          <div className="bg-medical/10 border border-medical/30 rounded-lg px-4 py-3 text-center">
-            <p className="text-sm text-medical font-medium">
-              {t('educationalModeBanner')}
-            </p>
-          </div>
+        {/* Educational Badge */}
+        <div className="max-w-3xl mx-auto mb-8 flex justify-center">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border text-xs text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+            {t('educationalModeBanner')}
+          </span>
         </div>
 
         {!selectedRotation ? (
@@ -126,7 +125,7 @@ const ClinicalStudy: React.FC = () => {
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="text-sm text-medical hover:underline flex items-center gap-1"
+                className="text-sm text-academic hover:underline flex items-center gap-1"
               >
                 ← {t('back')}
               </button>
@@ -155,7 +154,7 @@ const ClinicalStudy: React.FC = () => {
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="text-sm text-medical hover:underline flex items-center gap-1"
+                className="text-sm text-academic hover:underline flex items-center gap-1"
               >
                 ← {t('back')}
               </button>
@@ -180,7 +179,7 @@ const ClinicalStudy: React.FC = () => {
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="text-sm text-medical hover:underline flex items-center gap-1"
+                className="text-sm text-academic hover:underline flex items-center gap-1"
               >
                 ← {t('back')}
               </button>
