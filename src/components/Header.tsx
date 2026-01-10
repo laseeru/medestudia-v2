@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Globe, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAIStatus } from '@/contexts/AIStatusContext';
 import { Button } from '@/components/ui/button';
 import logoImage from '@/assets/logo-medestudia.png';
 
@@ -63,8 +64,7 @@ const Header: React.FC = () => {
 
 const AIStatusIndicator: React.FC = () => {
   const { t } = useLanguage();
-  // Simulated status - would connect to real AI service
-  const status: 'online' | 'limited' | 'offline' = 'online';
+  const { status } = useAIStatus();
   
   const statusConfig = {
     online: { color: 'bg-green-500', label: t('online') },

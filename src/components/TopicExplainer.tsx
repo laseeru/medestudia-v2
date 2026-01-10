@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Search, BookOpen, Lightbulb, Stethoscope, Globe } from 'lucide-react';
+import { Search, BookOpen, Lightbulb, Stethoscope, Globe, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAIStatus } from '@/contexts/AIStatusContext';
+import { callAI, type ExplainResponse, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -33,9 +35,11 @@ const placeholderExamples: Record<string, { es: string; en: string }> = {
 
 const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant = 'preclinical' }) => {
   const { t, language } = useLanguage();
+  const { updateStatus } = useAIStatus();
   const [topic, setTopic] = useState('');
   const [explanation, setExplanation] = useState<Explanation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Get context-aware placeholder
   const getPlaceholder = () => {
@@ -45,51 +49,49 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
     return found ? found[1][language] : t('topicExamplePlaceholder');
   };
 
-  const generateMockExplanation = (): Explanation => {
-    // Generate explanation that references the user's query
-    const userTopic = topic.trim();
-    
-    if (language === 'es') {
-      return {
-        definition: `${userTopic} es un tema fundamental en ${subject}. Su comprensión permite integrar conceptos básicos con aplicaciones clínicas relevantes para la práctica médica en el contexto cubano y latinoamericano. Este contenido es representativo y será actualizado con material curricular oficial.`,
-        keyFeatures: [
-          `Bases fisiopatológicas de ${userTopic} y su relevancia clínica`,
-          'Manifestaciones clínicas características según la presentación típica regional',
-          'Métodos diagnósticos recomendados considerando disponibilidad de recursos',
-          'Opciones terapéuticas basadas en guías OPS/OMS adaptadas al contexto local',
-          'Consideraciones especiales para poblaciones vulnerables en el entorno cubano',
-        ],
-        diagnosticOverview: mode === 'clinical-study'
-          ? `El enfoque diagnóstico de ${userTopic} debe priorizar la historia clínica detallada y el examen físico como herramientas fundamentales, especialmente en atención primaria. Los estudios complementarios deben solicitarse de manera racional según disponibilidad y necesidad clínica.`
-          : undefined,
-        lowResourceConsiderations: `En el contexto de la medicina cubana, se recomienda maximizar el uso de la semiología clínica y escalas validadas para ${userTopic}. El razonamiento clínico sólido, combinado con herramientas diagnósticas básicas, permite lograr alta precisión diagnóstica incluso con recursos limitados.`,
-      };
-    } else {
-      return {
-        definition: `${userTopic} is a fundamental topic in ${subject}. Its understanding allows integrating basic concepts with clinical applications relevant to medical practice in the Cuban and Latin American context. This content is representative and will be updated with official curricular material.`,
-        keyFeatures: [
-          `Pathophysiological basis of ${userTopic} and its clinical relevance`,
-          'Characteristic clinical manifestations according to typical regional presentation',
-          'Recommended diagnostic methods considering resource availability',
-          'Therapeutic options based on PAHO/WHO guidelines adapted to local context',
-          'Special considerations for vulnerable populations in the Cuban setting',
-        ],
-        diagnosticOverview: mode === 'clinical-study'
-          ? `The diagnostic approach to ${userTopic} should prioritize detailed clinical history and physical examination as fundamental tools, especially in primary care. Complementary studies should be requested rationally according to availability and clinical need.`
-          : undefined,
-        lowResourceConsiderations: `In the context of Cuban medicine, maximizing the use of clinical semiology and validated scales for ${userTopic} is recommended. Solid clinical reasoning, combined with basic diagnostic tools, achieves high diagnostic accuracy even with limited resources.`,
-      };
-    }
-  };
-
-  const handleExplain = () => {
+  const handleExplain = async () => {
     if (!topic.trim()) return;
     
     setIsLoading(true);
-    setTimeout(() => {
-      setExplanation(generateMockExplanation());
+    setError(null);
+    
+    try {
+      const apiMode = mode === 'clinical-study' ? 'clinico_estudio' : 'preclinico';
+      const response = await callAI({
+        tool: 'explain',
+        mode: apiMode,
+        language,
+        input: topic.trim(),
+        context: {
+          subject,
+          topic: topic.trim(),
+        },
+      });
+
+      updateStatus(true);
+
+      if (isErrorResponse(response)) {
+        throw new Error(response.error || 'Unknown error from AI service');
+      }
+
+      const explain = response as ExplainResponse;
+      
+      setExplanation({
+        definition: explain.definition,
+        keyFeatures: explain.keyFeatures || [],
+        diagnosticOverview: explain.diagnosis || explain.managementBasics,
+        lowResourceConsiderations: explain.lowResourceConsiderations,
+      });
+      
       setIsLoading(false);
-    }, 1200);
+    } catch (err: any) {
+      updateStatus(false);
+      const errorMessage = err.message || (language === 'es'
+        ? 'Error al generar la explicación. Por favor intenta de nuevo.'
+        : 'Error generating explanation. Please try again.');
+      setError(errorMessage);
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -107,6 +109,23 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
     <div className="space-y-6">
       {/* Search Input */}
       <div className="p-4 bg-card rounded-lg border border-border">
+        {error && (
+          <div className="mb-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs text-destructive font-medium">{error}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExplain}
+                disabled={isLoading || !topic.trim()}
+                className="mt-2 text-xs"
+              >
+                {language === 'es' ? 'Reintentar' : 'Retry'}
+              </Button>
+            </div>
+          </div>
+        )}
         <label className="block text-sm font-medium text-foreground mb-2">
           {t('enterTopic')}
         </label>
@@ -117,10 +136,11 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
             onChange={(e) => setTopic(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={getPlaceholder()}
-            className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={isLoading}
+            className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <Button onClick={handleExplain} disabled={isLoading || !topic.trim()}>
-            <Search className={cn("h-4 w-4", isLoading && "animate-pulse")} />
+            <Search className={cn("h-4 w-4", isLoading && "animate-spin")} />
           </Button>
         </div>
       </div>

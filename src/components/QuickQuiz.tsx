@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Play, CheckCircle, XCircle, RotateCcw, Trophy } from 'lucide-react';
+import { Play, CheckCircle, XCircle, RotateCcw, Trophy, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAIStatus } from '@/contexts/AIStatusContext';
 import { useScoreTracking } from '@/hooks/useScoreTracking';
+import { callAI, type QuizResponse, type Difficulty, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -30,80 +32,10 @@ const placeholderExamples: Record<string, { es: string; en: string }> = {
   pediatrics: { es: 'Ej: deshidratación, bronquiolitis', en: 'E.g.: dehydration, bronchiolitis' },
 };
 
-const generateRealisticQuestions = (topic: string, subject: string, language: 'es' | 'en'): QuizQuestion[] => {
-  // Cuban-context medical questions
-  const questionBanks = {
-    es: [
-      {
-        question: `En el estudio de ${topic || subject}, ¿cuál es el hallazgo clínico más frecuente?`,
-        options: ['Manifestaciones sistémicas variables', 'Síntomas localizados únicamente', 'Ausencia de signos objetivos', 'Presentación exclusivamente aguda'],
-        correctIndex: 0,
-        explanation: `Las manifestaciones de ${topic || subject} suelen ser sistémicas y variables, lo que requiere un enfoque diagnóstico integral. [Contenido educativo representativo]`,
-      },
-      {
-        question: `¿Cuál es el enfoque diagnóstico inicial más apropiado para ${topic || subject} en atención primaria?`,
-        options: ['Imagenología avanzada inmediata', 'Historia clínica y examen físico detallado', 'Derivación directa a especialista', 'Tratamiento empírico sin evaluación'],
-        correctIndex: 1,
-        explanation: `La historia clínica y el examen físico son fundamentales en el enfoque diagnóstico inicial, especialmente en contextos de atención primaria con recursos limitados.`,
-      },
-      {
-        question: `¿Qué aspecto es fundamental considerar en el manejo de ${topic || subject} en Cuba?`,
-        options: ['Disponibilidad local de medicamentos', 'Acceso a tecnología de punta', 'Protocolos extranjeros sin adaptación', 'Tratamientos de alto costo exclusivamente'],
-        correctIndex: 0,
-        explanation: `El contexto local, incluyendo la disponibilidad de medicamentos del cuadro básico, es fundamental para un manejo efectivo y realista.`,
-      },
-      {
-        question: `¿Cuál es la importancia de la medicina preventiva en relación con ${topic || subject}?`,
-        options: ['Es irrelevante para esta condición', 'Permite identificación temprana y mejor pronóstico', 'Solo aplica en hospitales terciarios', 'Aumenta costos sin beneficio claro'],
-        correctIndex: 1,
-        explanation: `La prevención y detección temprana son pilares del sistema de salud cubano, mejorando pronósticos y optimizando recursos.`,
-      },
-      {
-        question: `¿Qué recurso educativo es más útil para profundizar en ${topic || subject}?`,
-        options: ['Fuentes internacionales sin contextualización', 'Literatura médica adaptada al contexto regional', 'Solo experiencia práctica sin teoría', 'Memorización sin comprensión de conceptos'],
-        correctIndex: 1,
-        explanation: `La literatura adaptada al contexto regional permite aplicar conocimientos de manera efectiva considerando recursos y epidemiología local.`,
-      },
-    ],
-    en: [
-      {
-        question: `In studying ${topic || subject}, what is the most frequent clinical finding?`,
-        options: ['Variable systemic manifestations', 'Localized symptoms only', 'Absence of objective signs', 'Exclusively acute presentation'],
-        correctIndex: 0,
-        explanation: `Manifestations of ${topic || subject} are usually systemic and variable, requiring a comprehensive diagnostic approach. [Representative educational content]`,
-      },
-      {
-        question: `What is the most appropriate initial diagnostic approach for ${topic || subject} in primary care?`,
-        options: ['Immediate advanced imaging', 'Detailed clinical history and physical exam', 'Direct specialist referral', 'Empirical treatment without evaluation'],
-        correctIndex: 1,
-        explanation: `Clinical history and physical examination are fundamental in the initial diagnostic approach, especially in primary care settings with limited resources.`,
-      },
-      {
-        question: `What aspect is fundamental to consider in managing ${topic || subject} in Cuba?`,
-        options: ['Local medication availability', 'Access to cutting-edge technology', 'Foreign protocols without adaptation', 'High-cost treatments exclusively'],
-        correctIndex: 0,
-        explanation: `Local context, including availability of essential medications, is fundamental for effective and realistic management.`,
-      },
-      {
-        question: `What is the importance of preventive medicine in relation to ${topic || subject}?`,
-        options: ['It is irrelevant for this condition', 'Enables early identification and better prognosis', 'Only applies in tertiary hospitals', 'Increases costs without clear benefit'],
-        correctIndex: 1,
-        explanation: `Prevention and early detection are pillars of the Cuban health system, improving outcomes and optimizing resources.`,
-      },
-      {
-        question: `What educational resource is most useful for deepening knowledge of ${topic || subject}?`,
-        options: ['International sources without contextualization', 'Medical literature adapted to regional context', 'Only practical experience without theory', 'Memorization without concept understanding'],
-        correctIndex: 1,
-        explanation: `Literature adapted to regional context allows effective application of knowledge considering local resources and epidemiology.`,
-      },
-    ],
-  };
-
-  return questionBanks[language];
-};
 
 const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclinical' }) => {
   const { t, language } = useLanguage();
+  const { updateStatus } = useAIStatus();
   const { saveResult } = useScoreTracking();
   const [topic, setTopic] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
@@ -114,6 +46,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
   const [isStarted, setIsStarted] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Get context-aware placeholder
   const getPlaceholder = () => {
@@ -123,17 +56,61 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
     return found ? found[1][language] : t('topicPlaceholder');
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     setIsLoading(true);
-    setTimeout(() => {
-      setQuestions(generateRealisticQuestions(topic, subject, language));
-      setAnswers(new Array(5).fill(null));
+    setError(null);
+    
+    try {
+      const apiMode = mode === 'clinical-study' ? 'clinico_estudio' : 'preclinico';
+      const response = await callAI({
+        tool: 'quiz',
+        mode: apiMode,
+        language,
+        input: topic || subject,
+        context: {
+          subject,
+          difficulty,
+          topic: topic || undefined,
+        },
+      });
+
+      updateStatus(true);
+
+      if (isErrorResponse(response)) {
+        throw new Error(response.error || 'Unknown error from AI service');
+      }
+
+      const quiz = response as QuizResponse;
+      
+      if (!quiz.questions || quiz.questions.length === 0) {
+        throw new Error(language === 'es' 
+          ? 'No se generaron preguntas. Por favor intenta de nuevo.'
+          : 'No questions generated. Please try again.');
+      }
+
+      // Ensure we have exactly 5 questions (take first 5 if more)
+      const quizQuestions = quiz.questions.slice(0, 5).map(q => ({
+        question: q.question,
+        options: q.options,
+        correctIndex: q.correctIndex,
+        explanation: q.explanation,
+      }));
+
+      setQuestions(quizQuestions);
+      setAnswers(new Array(quizQuestions.length).fill(null));
       setCurrentIndex(0);
       setSelectedAnswer(null);
       setIsStarted(true);
       setIsFinished(false);
       setIsLoading(false);
-    }, 1000);
+    } catch (err: any) {
+      updateStatus(false);
+      const errorMessage = err.message || (language === 'es'
+        ? 'Error al generar el quiz. Por favor intenta de nuevo.'
+        : 'Error generating quiz. Please try again.');
+      setError(errorMessage);
+      setIsLoading(false);
+    }
   };
 
   const handleAnswerSelect = (index: number) => {
@@ -191,6 +168,23 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
           <p className="text-sm text-muted-foreground">{t('quickQuizIntro')}</p>
         </div>
 
+        {error && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs text-destructive font-medium">{error}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleStart}
+                disabled={isLoading}
+                className="mt-2 text-xs"
+              >
+                {language === 'es' ? 'Reintentar' : 'Retry'}
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">{t('topicOptional')}</label>
@@ -199,7 +193,8 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder={getPlaceholder()}
-              className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              disabled={isLoading}
+              className="w-full rounded-lg border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
