@@ -104,7 +104,8 @@ const server = createServer(async (req, res) => {
 
 server.listen(port, () => {
   console.log(`✅ API server running on http://localhost:${port}`);
-  console.log(`📝 API Key loaded: ${envVars.DEEPSEEK_API_KEY ? '✅ Yes' : '❌ No (check .env.local)'}`);
+  const apiKey = envVars.AZURE_FOUNDRY_API_KEY || envVars.DEEPSEEK_API_KEY;
+  console.log(`📝 API Key loaded: ${apiKey ? '✅ Yes' : '❌ No (check .env.local)'}`);
   console.log(`🌐 Frontend should proxy /api requests to this server`);
 });
 
