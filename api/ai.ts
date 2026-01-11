@@ -15,6 +15,9 @@ interface VercelResponse {
 declare const process: {
   env: {
     DEEPSEEK_API_KEY?: string;
+    AZURE_FOUNDRY_API_KEY?: string;
+    AZURE_FOUNDRY_ENDPOINT?: string;
+    AI_PROVIDER?: string;
   };
 };
 
@@ -87,13 +90,17 @@ interface ErrorResponse {
   raw?: string;
 }
 
-// DeepSeek API configuration
-const DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
-const DEEPSEEK_MODEL = 'deepseek-chat';
+// Azure DeepSeek API configuration
 const MAX_INPUT_LENGTH = 2000;
 const MAX_TOKENS = 2000;
 const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
+
+// Get Azure endpoint from environment or use default
+function getAzureEndpoint(): string {
+  return process.env.AZURE_FOUNDRY_ENDPOINT || 
+    'https://medestudia-deepseek-resource.cognitiveservices.azure.com/openai/deployments/DeepSeek-V3.1/chat/completions?api-version=2024-05-01-preview';
+}
 
 // Helper to build system prompt based on tool and mode
 function buildSystemPrompt(tool: AIRequest['tool'], mode: AIRequest['mode'], language: AIRequest['language']): string {
@@ -358,13 +365,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     body.input = body.input.substring(0, MAX_INPUT_LENGTH);
   }
 
-  // Check for API key
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  // Check for API key (support both old and new variable names)
+  const apiKey = process.env.AZURE_FOUNDRY_API_KEY || process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    console.error('DEEPSEEK_API_KEY not configured');
+    console.error('API key not configured');
     return res.status(500).json({ 
       type: 'error', 
-      error: 'AI service not configured. Please set DEEPSEEK_API_KEY environment variable.' 
+      error: 'AI service not configured. Please set AZURE_FOUNDRY_API_KEY or DEEPSEEK_API_KEY environment variable.' 
     });
   }
 
@@ -376,15 +383,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Determine temperature
     const temperature = body.tool === 'guides' ? GUIDELINES_TEMPERATURE : DEFAULT_TEMPERATURE;
 
-    // Call DeepSeek API
-    const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    // Call Azure DeepSeek API
+    const endpoint = getAzureEndpoint();
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'api-key': apiKey, // Azure uses api-key header instead of Authorization Bearer
       },
       body: JSON.stringify({
-        model: DEEPSEEK_MODEL,
+        // Model is already specified in the URL path (DeepSeek-V3.1)
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -402,7 +410,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (response.status === 401) {
         return res.status(500).json({ 
           type: 'error', 
-          error: 'Invalid API key. Please check DEEPSEEK_API_KEY configuration.' 
+          error: 'Invalid API key. Please check AZURE_FOUNDRY_API_KEY configuration.' 
         });
       }
       
