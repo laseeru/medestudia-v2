@@ -92,7 +92,14 @@ interface ErrorResponse {
 
 // Azure DeepSeek API configuration
 const MAX_INPUT_LENGTH = 2000;
-const MAX_TOKENS = 2000;
+// Tool-specific token limits for optimal performance
+const TOKEN_LIMITS = {
+  mcq: 800,      // Short question + options + explanation
+  quiz: 1500,    // 5 questions with explanations
+  explain: 1200, // Structured explanation
+  chat: 1000,    // Conversational responses
+  guides: 1500,  // Structured guidelines
+};
 const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
 
@@ -380,8 +387,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const systemPrompt = buildSystemPrompt(body.tool, body.mode, body.language);
     const userPrompt = buildUserPrompt(body);
 
-    // Determine temperature
+    // Determine temperature and token limit based on tool
     const temperature = body.tool === 'guides' ? GUIDELINES_TEMPERATURE : DEFAULT_TEMPERATURE;
+    const maxTokens = TOKEN_LIMITS[body.tool] || TOKEN_LIMITS.chat;
 
     // Call Azure DeepSeek API
     const endpoint = getAzureEndpoint();
@@ -398,7 +406,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           { role: 'user', content: userPrompt },
         ],
         temperature,
-        max_tokens: MAX_TOKENS,
+        max_tokens: maxTokens,
         response_format: { type: 'json_object' }, // Force JSON mode when available
       }),
     });
