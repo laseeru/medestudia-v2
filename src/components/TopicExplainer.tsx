@@ -54,11 +54,12 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
     
     setIsLoading(true);
     setError(null);
+    setExplanation(null);
     
     try {
       const apiMode = mode === 'clinical-study' ? 'clinico_estudio' : 'preclinico';
-      const response = await callAI({
-        tool: 'explain',
+      const request = {
+        tool: 'explain' as const,
         mode: apiMode,
         language,
         input: topic.trim(),
@@ -66,9 +67,10 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
           subject,
           topic: topic.trim(),
         },
-      });
+      };
 
-      updateStatus(true);
+      // For explain tool, use regular call (needs structured JSON)
+      const response = await callAI(request);
 
       if (isErrorResponse(response)) {
         throw new Error(response.error || 'Unknown error from AI service');
@@ -82,7 +84,8 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
         diagnosticOverview: explain.diagnosis || explain.managementBasics,
         lowResourceConsiderations: explain.lowResourceConsiderations,
       });
-      
+
+      updateStatus(true);
       setIsLoading(false);
     } catch (err: any) {
       updateStatus(false);

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, AlertCircle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
-import { callAI, type ChatResponse, type GuidelinesResponse, isErrorResponse } from '@/lib/aiClient';
+import { callAI, callAIStream, type ChatResponse, type GuidelinesResponse, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -138,33 +138,68 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject }) => {
         mode === 'clinical-study' ? 'clinico_estudio' :
         'clinico_guias';
 
-      const response = await callAI({
+      const request = {
         tool,
         mode: apiMode,
         language,
         input: userQuery,
         context: subject ? { subject } : undefined,
-      });
+      };
 
-      // Update AI status on success
-      updateStatus(true);
+      // Use streaming for chat responses (non-guidelines)
+      if (tool === 'chat') {
+        // Create assistant message for streaming
+        const assistantMessageId = (Date.now() + 1).toString();
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          role: 'assistant',
+          content: '',
+        };
 
-      if (isErrorResponse(response)) {
-        throw new Error(response.error || 'Unknown error from AI service');
-      }
+        setMessages((prev) => [...prev, assistantMessage]);
 
-      // Format response based on type
-      let responseContent = '';
-      
-      if (response.type === 'chat') {
-        responseContent = response.answer;
-        if (response.note) {
-          responseContent += `\n\n[${response.note}]`;
+        // Stream the response
+        await callAIStream(request, (chunk: string) => {
+          setMessages((prev) => 
+            prev.map(msg => 
+              msg.id === assistantMessageId 
+                ? { ...msg, content: msg.content + chunk }
+                : msg
+            )
+          );
+          scrollToBottom();
+        });
+
+        // Add note if needed
+        if (apiMode === 'clinico_estudio') {
+          const note = language === 'es' 
+            ? 'Modo educativo — caso hipotético para fines de aprendizaje'
+            : 'Educational mode — hypothetical case for learning purposes';
+          setMessages((prev) => 
+            prev.map(msg => 
+              msg.id === assistantMessageId 
+                ? { ...msg, content: msg.content + `\n\n[${note}]` }
+                : msg
+            )
+          );
         }
-      } else if (response.type === 'guides') {
+
+        updateStatus(true);
+        setIsTyping(false);
+      } else {
+        // Non-streaming for guidelines (structured JSON)
+        const response = await callAI(request);
+
+        // Update AI status on success
+        updateStatus(true);
+
+        if (isErrorResponse(response)) {
+          throw new Error(response.error || 'Unknown error from AI service');
+        }
+
         // Format guidelines response as structured text
         const guides = response as GuidelinesResponse;
-        responseContent = guides.steps.map((step, idx) => {
+        let responseContent = guides.steps.map((step, idx) => {
           const stepText = `${idx + 1}. **${step.title}**\n${step.details.map(d => `   • ${d}`).join('\n')}`;
           return stepText;
         }).join('\n\n');
@@ -176,16 +211,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject }) => {
         if (guides.sourceNote) {
           responseContent += `\n\n*${guides.sourceNote}*`;
         }
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: responseContent,
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsTyping(false);
       }
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: responseContent,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsTyping(false);
     } catch (err: any) {
       // Update AI status on failure
       updateStatus(false);

@@ -9,6 +9,9 @@ interface VercelRequest {
 interface VercelResponse {
   status: (code: number) => VercelResponse;
   json: (data: any) => void;
+  setHeader: (name: string, value: string) => void;
+  write: (chunk: string) => void;
+  end: () => void;
 }
 
 // Environment variable access helper
@@ -391,24 +394,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const temperature = body.tool === 'guides' ? GUIDELINES_TEMPERATURE : DEFAULT_TEMPERATURE;
     const maxTokens = TOKEN_LIMITS[body.tool] || TOKEN_LIMITS.chat;
 
+    // Check if streaming is requested (only for chat tool, not explain since it needs JSON)
+    const shouldStream = body.tool === 'chat' && body.mode !== 'clinico_guias';
+    const useStreaming = shouldStream && !req.query?.noStream; // Allow opt-out via query param
+
     // Call Azure DeepSeek API
     const endpoint = getAzureEndpoint();
+    const requestBody: any = {
+      // Model is already specified in the URL path (DeepSeek-V3.1)
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature,
+      max_tokens: maxTokens,
+    };
+
+    // Only use JSON mode for non-streaming structured responses
+    if (!useStreaming && (body.tool === 'guides' || body.tool === 'mcq' || body.tool === 'quiz' || body.tool === 'explain')) {
+      requestBody.response_format = { type: 'json_object' };
+    }
+
+    // Enable streaming for chat and explain
+    if (useStreaming) {
+      requestBody.stream = true;
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'api-key': apiKey, // Azure uses api-key header instead of Authorization Bearer
       },
-      body: JSON.stringify({
-        // Model is already specified in the URL path (DeepSeek-V3.1)
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature,
-        max_tokens: maxTokens,
-        response_format: { type: 'json_object' }, // Force JSON mode when available
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -429,6 +447,81 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Handle streaming response
+    if (useStreaming && response.body) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.status(200);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                res.write('data: [DONE]\n\n');
+                res.end();
+                return;
+              }
+
+              try {
+                const json = JSON.parse(data);
+                const delta = json.choices?.[0]?.delta;
+                if (delta?.content) {
+                  res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            }
+          }
+        }
+
+        // Process remaining buffer
+        if (buffer.trim()) {
+          const lines = buffer.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data !== '[DONE]') {
+                try {
+                  const json = JSON.parse(data);
+                  const delta = json.choices?.[0]?.delta;
+                  if (delta?.content) {
+                    res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
+                  }
+                } catch (e) {
+                  // Skip invalid JSON
+                }
+              }
+            }
+          }
+        }
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+      } catch (error: any) {
+        console.error('Streaming error:', error);
+        res.write(`data: ${JSON.stringify({ error: error.message || 'Streaming error' })}\n\n`);
+        res.end();
+        return;
+      }
+    }
+
+    // Non-streaming response (existing logic)
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
 
