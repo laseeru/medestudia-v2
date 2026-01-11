@@ -154,7 +154,9 @@ export async function callAIStream(
 
     // Check if response is streaming (text/event-stream)
     const contentType = response.headers.get('content-type');
+    console.log('Response content-type:', contentType);
     if (contentType?.includes('text/event-stream')) {
+      console.log('Using streaming mode');
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
@@ -214,6 +216,7 @@ export async function callAIStream(
       }
     } else {
       // Fallback to non-streaming
+      console.log('Falling back to non-streaming mode');
       const data: AIResponse = await response.json();
       if (data.type === 'error') {
         throw new Error(data.error || 'Unknown error from AI service');

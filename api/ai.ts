@@ -449,6 +449,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Handle streaming response
     if (useStreaming && response.body) {
+      console.log('Starting streaming response');
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
