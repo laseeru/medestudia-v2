@@ -1,226 +1,162 @@
-# MedEstudia v2
+# MedEstudia
 
-An AI-powered medical education platform designed for Cuban medical students, offering educational support for preclinical and clinical studies, as well as structured navigation of clinical guidelines. The platform is bilingual (Spanish-first with English toggle) and optimized for low-resource healthcare contexts.
+MedEstudia es una aplicación web educativa diseñada para apoyar el estudio de estudiantes de Medicina en Cuba.  
+Integra flujos de estudio preclínico y clínico con herramientas interactivas basadas en IA, en modo estrictamente educativo.
 
-## Features
+## Características
 
-### Preclínico (Preclinical)
-- **Subject Navigation**: Access 10 core preclinical subjects (Anatomy, Histology, Cell Biology, Biochemistry, Physiology, Microbiology, Parasitology, Immunology, Biostatistics, Pharmacology)
-- **Study Tools**:
-  - **MCQ Generator**: Generate topic-specific multiple-choice questions with difficulty levels (Easy, Medium, Hard)
-  - **Quick Quiz**: 5-question quizzes with immediate feedback and scoring
-  - **Topic Explainer**: Structured explanations with key features, diagnostic approaches, and low-resource considerations
-  - **Statistics**: Track your study progress with local score tracking
+- **Flujo Preclínico**  
+  Selección de asignaturas básicas (Anatomía, Histología, Fisiología, etc.) con acceso a:
+  - Generador de preguntas tipo examen (MCQ)
+  - Quiz rápido de 5 preguntas
+  - Explicador de temas
+  - Estadísticas de rendimiento locales
 
-### Clínico (Clinical)
-- **Clinical Study Mode**: Educational preparation for clinical rotations and exams
-  - Organized by clinical rotations (Internal Medicine, Surgery, Pediatrics, Gynecology, General Medicine)
-  - System-based navigation (Cardiovascular, Respiratory, Endocrine, Gastrointestinal, Neurological, Renal)
-  - Same study tools as Preclínico adapted for clinical contexts
-- **Clinical Guidelines Mode**: Structured step-by-step guidance based on representative clinical guidelines
-  - Protocol-based approach with warnings and source notes
-  - Disclaimer gate for appropriate educational use
+- **Flujo Clínico – Estudio**  
+  Organización por rotaciones (Medicina Interna, Cirugía, Pediatría, Ginecología, MGI) y sistemas (Cardiovascular, Respiratorio, etc.) con las mismas herramientas de estudio adaptadas al contexto clínico.
 
-### AI-Powered Chat
-- Context-aware chat interface that adapts to the selected mode and subject
-- Responses explicitly reference user topics
-- Guidelines mode returns structured, step-based information
+- **Flujo Clínico – Guías**  
+  Módulo de chat estructurado para explorar guías clínicas representativas en modo educativo, con:
+  - Resúmenes por pasos
+  - Advertencias importantes
+  - Nota de fuente aclarando el carácter representativo del contenido
 
-### Additional Features
-- **Bilingual Support**: Spanish-first interface with English toggle (language preference persists)
-- **Local Score Tracking**: Quiz results saved to localStorage (no login required)
-- **Chat History**: Last 20 messages per section persisted locally
-- **AI Status Indicator**: Real-time status display (Online / Limited / Offline)
-- **Error Handling**: Friendly error messages with retry functionality
+- **Bilingüe (ES / EN)**  
+  Interfaz en español por defecto con cambio a inglés, persistente en el navegador.
 
-## Tech Stack
+- **Persistencia local (sin login)**  
+  - Preferencia de idioma
+  - Historial de quizzes y estadísticas
+  - Historial de chat por sección (hasta 20 mensajes)
+  — todo almacenado en `localStorage` del navegador.
 
-- **Frontend**: 
-  - React 18 with TypeScript
-  - Vite for build tooling
-  - Tailwind CSS for styling
-  - shadcn/ui component library
-  - React Router for navigation
-  - React Query for state management
+## Tecnologías
 
-- **Backend**:
-  - Vercel Serverless Functions
-  - DeepSeek Chat API (OpenAI-compatible endpoint)
+- **Frontend**
+  - React 18 + TypeScript
+  - Vite
+  - React Router
+  - Tailwind CSS
+  - shadcn/ui
 
-- **AI Integration**:
-  - DeepSeek Chat model (`deepseek-chat`)
-  - Server-side API key management
-  - Strict JSON-only responses with robust error handling
+- **Estado / datos**
+  - React Query para estados asíncronos
+  - Contextos propios para idioma y estado de la IA
 
-## Setup Instructions
+- **Backend (prototipo)**
+  - Endpoint `/api/ai` implementado como función serverless (compatible con Vercel)
+  - Integración con proveedores de modelos de lenguaje vía API tipo OpenAI
 
-### Prerequisites
-- Node.js 18+ (recommend using [nvm](https://github.com/nvm-sh/nvm))
-- npm or yarn package manager
+## Instalación
 
-### Installation
+Requisitos:
 
-1. **Clone the repository**
-```sh
-git clone <YOUR_GIT_URL>
-   cd medestudia-ayuda-pro
-   ```
+- Node.js 18+
+- npm
 
-2. **Install dependencies**
-   ```sh
-   npm install
-   ```
+Pasos:
 
-3. **Set up environment variables**
-   
-   Create a `.env.local` file in the project root:
-   ```env
-   DEEPSEEK_API_KEY=your_deepseek_api_key_here
-   ```
-   
-   **Important**: Never commit API keys to version control. The `.env.local` file should be in `.gitignore`.
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd medestudia-ayuda-pro
+npm install
+```
 
-4. **Start development server**
-   ```sh
+## Desarrollo local
+
+1. Configura las variables de entorno (ver más abajo).
+2. Inicia el servidor de desarrollo:
+
+```bash
 npm run dev
 ```
 
-   The app will be available at `http://localhost:8080` (or the port specified in `vite.config.ts`).
+La aplicación estará disponible normalmente en `http://localhost:8080`.
 
-### Build & Preview
+## Variables de entorno
 
-- **Build for production**:
-  ```sh
-  npm run build
-  ```
+Crear un archivo `.env.local` en la raíz del proyecto:
 
-- **Preview production build**:
-  ```sh
-  npm run preview
-  ```
+```env
+DEEPSEEK_API_KEY=tu_clave_otra_api_aqui
+```
 
-- **Lint code**:
-  ```sh
-  npm run lint
-  ```
+En producción (por ejemplo en Vercel), las variables se configuran desde el panel de la plataforma.
 
-## Environment Variables
+## Arquitectura básica
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DEEPSEEK_API_KEY` | Your DeepSeek API key for AI responses | Yes |
+- `src/`
+  - `pages/` — Pantallas principales: Inicio, Preclínico, Clínico, Estudio Clínico, Guías Clínicas.
+  - `components/` — Componentes reutilizables (Chat, MCQGenerator, QuickQuiz, TopicExplainer, etc.).
+  - `contexts/` — Contextos de React (`LanguageContext`, `AIStatusContext`).
+  - `lib/` — Lógica de cliente para el endpoint de IA (`aiClient.ts`) y utilidades.
+- `api/`
+  - `ai.ts` — Función serverless que recibe las peticiones desde el frontend y llama al proveedor de IA seleccionado.
 
-### Getting a DeepSeek API Key
-
-1. Sign up at [DeepSeek](https://platform.deepseek.com/)
-2. Navigate to API Keys section
-3. Create a new API key
-4. Add it to your `.env.local` file
-
-## Deployment
-
-### Vercel Deployment
-
-The project is configured for Vercel deployment:
-
-1. **Connect your repository** to Vercel
-2. **Set environment variables** in Vercel Dashboard:
-   - Go to Project Settings → Environment Variables
-   - Add `DEEPSEEK_API_KEY` with your API key
-3. **Deploy**: Vercel will automatically deploy on push to main branch
-
-The `/api/ai.ts` file is automatically recognized as a Vercel Serverless Function and will be deployed to `https://your-domain.vercel.app/api/ai`.
-
-### Custom Domain
-
-To connect a custom domain:
-- Navigate to Project Settings → Domains in Vercel Dashboard
-- Add your custom domain
-- Follow DNS configuration instructions
-
-## Project Structure
+## Estructura del proyecto
 
 ```
 medestudia-ayuda-pro/
 ├── api/
-│   └── ai.ts              # Vercel serverless function for DeepSeek API
+│   └── ai.ts              # Función serverless para el endpoint de IA
 ├── src/
-│   ├── components/        # React components
+│   ├── components/        # Componentes React
 │   │   ├── ChatInterface.tsx
 │   │   ├── MCQGenerator.tsx
 │   │   ├── QuickQuiz.tsx
 │   │   ├── TopicExplainer.tsx
-│   │   └── ui/            # shadcn/ui components
-│   ├── contexts/          # React contexts
+│   │   └── ui/            # Componentes shadcn/ui
+│   ├── contexts/
 │   │   ├── LanguageContext.tsx
 │   │   └── AIStatusContext.tsx
-│   ├── hooks/             # Custom React hooks
+│   ├── hooks/
 │   │   └── useScoreTracking.ts
 │   ├── lib/
-│   │   ├── aiClient.ts    # AI API client helper
+│   │   ├── aiClient.ts
 │   │   └── utils.ts
-│   ├── pages/             # Page components
+│   ├── pages/
 │   │   ├── Index.tsx
 │   │   ├── Preclinical.tsx
 │   │   ├── Clinical.tsx
 │   │   ├── ClinicalStudy.tsx
 │   │   └── ClinicalGuidelines.tsx
-│   └── main.tsx           # App entry point
-├── public/                # Static assets
+│   └── main.tsx
+├── public/
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.ts
 └── README.md
 ```
 
-## Safety & Disclaimer
+## Build y despliegue
 
-**Important**: This platform is designed for **educational purposes only**.
+- **Compilar para producción:**
+  ```bash
+  npm run build
+  ```
 
-- **Educational Content**: All AI-generated content is representative and intended for learning and study purposes only.
-- **Not for Clinical Decision-Making**: This tool does NOT replace professional medical judgment or real clinical decision-making.
-- **Representative Guidelines**: Clinical guidelines mode uses representative content. Official Cuban clinical guidelines will be integrated later using retrieval-augmented generation (RAG) techniques after corresponding institutional approval.
-- **Hypothetical Cases**: Clinical study mode presents hypothetical cases for educational purposes only.
+- **Previsualizar build:**
+  ```bash
+  npm run preview
+  ```
 
-Users are required to acknowledge these disclaimers before accessing Clinical Guidelines mode.
+- **Despliegue en Vercel:**  
+  Conectar el repositorio a Vercel, configurar la variable `DEEPSEEK_API_KEY` (o la que use el proveedor de IA) en el panel, y desplegar. El archivo `api/ai.ts` se reconoce como función serverless.
 
-## Local Storage
+## Uso previsto y aviso importante
 
-The application uses browser localStorage (no login required) for:
-- **Language preference** (`medestudia_language`)
-- **Quiz scores and statistics** (`medestudia_scores`)
-- **Chat history** (`medestudia_chat_*`, last 20 messages per section)
-- **AI status** (`medestudia_ai_status`)
+MedEstudia está diseñada **exclusivamente con fines educativos**.  
+No debe utilizarse para:
 
-All data is stored locally and is not transmitted to any external servers except for AI API calls.
+- Diagnosticar pacientes reales
+- Indicar tratamientos
+- Tomar decisiones clínicas en la práctica asistencial
 
-## Contribution
+Cualquier referencia a diagnósticos, tratamientos o guías debe interpretarse como **ejemplo representativo** para el estudio, y nunca como sustituto del juicio clínico profesional ni de las guías oficiales vigentes.
 
-Contributions are welcome! Please follow these guidelines:
+## Licencia y titularidad
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Autores: Abdul-Rashid Dasana Abdulai.
+- Titularidad económica: Facultad de Ciencias Médicas Julio Trigo López, según registro ante CENDA.
 
-### Code Style
-
-- Use TypeScript for all new files
-- Follow existing code patterns and component structure
-- Ensure all components are properly typed
-- Add error handling for all API calls
-- Test locally before submitting PRs
-
-## License
-
-This project is private and proprietary. All rights reserved.
-
-## Support
-
-For issues, questions, or suggestions, please open an issue in the repository or contact the development team.
-
----
-
-**Version**: 2.0.0  
-**Last Updated**: 2024
+El uso, despliegue y posibles adaptaciones de MedEstudia se realizan en el marco de acuerdos con la institución titular y la normativa cubana de derecho de autor.
