@@ -12,7 +12,7 @@ const Footer: React.FC = () => {
             {t('prototypeNotice')}
           </p>
           <p className="text-sm text-muted-foreground">
-            MedEstudia © 2025
+            MedEstudia © 2026
           </p>
         </div>
       </div>
