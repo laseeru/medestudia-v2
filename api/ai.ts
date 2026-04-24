@@ -99,14 +99,15 @@ interface ErrorResponse {
 const MAX_INPUT_LENGTH = 2000;
 // Tool-specific token limits for optimal performance
 const TOKEN_LIMITS = {
-  mcq: 800,      // Short question + options + explanation
-  quiz: 1500,    // 5 questions with explanations
-  explain: 1200, // Structured explanation
-  chat: 1000,    // Conversational responses
-  guides: 1500,  // Structured guidelines
+  mcq: 600,      // Short question + options + explanation
+  quiz: 1200,    // 5 questions with concise explanations
+  explain: 850,  // Structured explanation
+  chat: 700,     // Conversational responses
+  guides: 1100,  // Structured guidelines
 };
 const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
+const AI_REQUEST_TIMEOUT_MS = 18000;
 
 type AIProvider = 'deepseek' | 'azure';
 
@@ -415,9 +416,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const temperature = body.tool === 'guides' ? GUIDELINES_TEMPERATURE : DEFAULT_TEMPERATURE;
     const maxTokens = TOKEN_LIMITS[body.tool] || TOKEN_LIMITS.chat;
 
-    // Check if streaming is requested (only for chat tool, not explain since it needs JSON)
+    // Enable streaming only when explicitly requested.
+    // Default JSON responses are faster to integrate and easier to handle consistently.
     const shouldStream = body.tool === 'chat' && body.mode !== 'clinico_guias';
-    const useStreaming = shouldStream && !req.query?.noStream; // Allow opt-out via query param
+    const useStreaming = shouldStream && req.query?.stream === '1';
 
     // Resolve endpoint based on selected provider
     const endpoint = provider === 'deepseek' ? getDeepSeekEndpoint() : getAzureEndpoint();
@@ -444,6 +446,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       requestBody.stream = true;
     }
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -453,7 +458,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           : { 'api-key': apiKey }),
       },
       body: JSON.stringify(requestBody),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorText = await response.text();
