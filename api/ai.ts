@@ -18,6 +18,8 @@ interface VercelResponse {
 declare const process: {
   env: {
     DEEPSEEK_API_KEY?: string;
+    DEEPSEEK_API_BASE_URL?: string;
+    DEEPSEEK_MODEL?: string;
     AZURE_FOUNDRY_API_KEY?: string;
     AZURE_FOUNDRY_ENDPOINT?: string;
     AI_PROVIDER?: string;
@@ -93,7 +95,7 @@ interface ErrorResponse {
   raw?: string;
 }
 
-// Azure DeepSeek API configuration
+// AI provider configuration
 const MAX_INPUT_LENGTH = 2000;
 // Tool-specific token limits for optimal performance
 const TOKEN_LIMITS = {
@@ -106,10 +108,21 @@ const TOKEN_LIMITS = {
 const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
 
+type AIProvider = 'deepseek' | 'azure';
+
+function getProvider(): AIProvider {
+  return process.env.AI_PROVIDER === 'deepseek' ? 'deepseek' : 'azure';
+}
+
 // Get Azure endpoint from environment or use default
 function getAzureEndpoint(): string {
   return process.env.AZURE_FOUNDRY_ENDPOINT || 
     'https://medestudia-deepseek-resource.cognitiveservices.azure.com/openai/deployments/DeepSeek-V3.1/chat/completions?api-version=2024-05-01-preview';
+}
+
+function getDeepSeekEndpoint(): string {
+  const baseUrl = process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com';
+  return `${baseUrl}/chat/completions`;
 }
 
 // Helper to build system prompt based on tool and mode
@@ -375,13 +388,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     body.input = body.input.substring(0, MAX_INPUT_LENGTH);
   }
 
-  // Check for API key (support both old and new variable names)
-  const apiKey = process.env.AZURE_FOUNDRY_API_KEY || process.env.DEEPSEEK_API_KEY;
+  const provider = getProvider();
+
+  // Resolve API key based on selected provider
+  const apiKey =
+    provider === 'deepseek'
+      ? process.env.DEEPSEEK_API_KEY
+      : process.env.AZURE_FOUNDRY_API_KEY || process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     console.error('API key not configured');
     return res.status(500).json({ 
       type: 'error', 
-      error: 'AI service not configured. Please set AZURE_FOUNDRY_API_KEY or DEEPSEEK_API_KEY environment variable.' 
+      error:
+        provider === 'deepseek'
+          ? 'AI service not configured. Please set DEEPSEEK_API_KEY environment variable.'
+          : 'AI service not configured. Please set AZURE_FOUNDRY_API_KEY or DEEPSEEK_API_KEY environment variable.'
     });
   }
 
@@ -398,10 +419,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const shouldStream = body.tool === 'chat' && body.mode !== 'clinico_guias';
     const useStreaming = shouldStream && !req.query?.noStream; // Allow opt-out via query param
 
-    // Call Azure DeepSeek API
-    const endpoint = getAzureEndpoint();
+    // Resolve endpoint based on selected provider
+    const endpoint = provider === 'deepseek' ? getDeepSeekEndpoint() : getAzureEndpoint();
     const requestBody: any = {
-      // Model is already specified in the URL path (DeepSeek-V3.1)
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -409,6 +429,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       temperature,
       max_tokens: maxTokens,
     };
+
+    if (provider === 'deepseek') {
+      requestBody.model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+    }
 
     // Only use JSON mode for non-streaming structured responses
     if (!useStreaming && (body.tool === 'guides' || body.tool === 'mcq' || body.tool === 'quiz' || body.tool === 'explain')) {
@@ -424,7 +448,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'api-key': apiKey, // Azure uses api-key header instead of Authorization Bearer
+        ...(provider === 'deepseek'
+          ? { Authorization: `Bearer ${apiKey}` }
+          : { 'api-key': apiKey }),
       },
       body: JSON.stringify(requestBody),
     });
@@ -436,7 +462,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (response.status === 401) {
         return res.status(500).json({ 
           type: 'error', 
-          error: 'Invalid API key. Please check AZURE_FOUNDRY_API_KEY configuration.' 
+          error:
+            provider === 'deepseek'
+              ? 'Invalid API key. Please check DEEPSEEK_API_KEY configuration.'
+              : 'Invalid API key. Please check AZURE_FOUNDRY_API_KEY configuration.'
         });
       }
       
