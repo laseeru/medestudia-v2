@@ -476,9 +476,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                         }
 
                         return (
-                          <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
-                            <p className="text-[11px] font-medium text-muted-foreground mb-1">📖 {isSpanish ? 'Explicación' : 'Explanation'}</p>
-                            <p className="whitespace-pre-wrap">{flow.explanation}</p>
+                          <div className="space-y-2 animate-fade-in transition-all duration-300">
+                            {flow.reflectionInput?.trim() && (
+                              <div className="rounded-lg border border-academic/30 bg-academic/5 p-3">
+                                <p className="text-[11px] font-medium text-muted-foreground mb-1">
+                                  {isSpanish ? 'Tu reflexión' : 'Your reflection'}
+                                </p>
+                                <p className="whitespace-pre-wrap text-sm">{flow.reflectionInput.trim()}</p>
+                              </div>
+                            )}
+                            <div className="rounded-lg border border-border/60 bg-background/50 p-3">
+                              <p className="text-[11px] font-medium text-muted-foreground mb-1">📖 {isSpanish ? 'Explicación' : 'Explanation'}</p>
+                              <p className="whitespace-pre-wrap">{flow.explanation}</p>
+                            </div>
                           </div>
                         );
                       })()}
