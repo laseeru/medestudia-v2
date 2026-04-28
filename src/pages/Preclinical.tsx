@@ -116,8 +116,8 @@ const Preclinical: React.FC = () => {
                 <h2 className="text-lg font-semibold text-foreground">{t('studyToolsSection')}</h2>
                 <p className="text-sm text-muted-foreground">{t('studyToolsSectionDesc')}</p>
               </div>
-              <div className="rounded-2xl border border-academic/40 bg-card/70 shadow-[0_0_0_1px_rgba(59,130,246,0.15),0_0_30px_rgba(59,130,246,0.1)] p-4 md:p-5">
-                <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="rounded-2xl border border-academic/40 bg-card/70 shadow-[0_0_0_1px_rgba(59,130,246,0.15),0_0_30px_rgba(59,130,246,0.1)] p-5 md:p-6">
+                <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2">
                     <div className="h-10 w-10 rounded-xl bg-academic/15 border border-academic/30 text-academic flex items-center justify-center">
                       <Stethoscope className="h-5 w-5" />
@@ -133,26 +133,26 @@ const Preclinical: React.FC = () => {
                   </span>
                 </div>
 
-                <form onSubmit={handleAssistantSubmit} className="space-y-2">
-                  <div className="flex gap-2">
+                <form onSubmit={handleAssistantSubmit} className="space-y-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
                     <input
                       type="text"
                       value={assistantQuestion}
                       onChange={(e) => setAssistantQuestion(e.target.value)}
                       placeholder={t('medicalAssistantInputPlaceholder')}
                       autoFocus
-                      className="flex-1 rounded-lg border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="w-full flex-1 min-h-11 rounded-lg border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-2 rounded-lg bg-academic text-white px-4 py-2.5 text-sm font-medium hover:bg-academic/90 transition-colors disabled:opacity-70"
+                      className="inline-flex w-full md:w-auto items-center justify-center gap-2 rounded-lg bg-academic text-white px-4 min-h-11 py-3 text-sm font-medium hover:bg-academic/90 transition-colors disabled:opacity-70"
                       disabled={assistantSubmitting}
                     >
                       <Send className="h-4 w-4" />
                       {assistantSubmitting ? t('loading') : t('askAssistant')}
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">{t('medicalAssistantExample')}</p>
+                  <p className="text-xs text-muted-foreground pt-1">{t('medicalAssistantExample')}</p>
                 </form>
               </div>
             </section>
