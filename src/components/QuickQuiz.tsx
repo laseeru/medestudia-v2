@@ -3,7 +3,7 @@ import { Play, CheckCircle, XCircle, RotateCcw, Trophy, AlertCircle } from 'luci
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
 import { useScoreTracking } from '@/hooks/useScoreTracking';
-import { callAI, type QuizResponse, type Difficulty, isErrorResponse } from '@/lib/aiClient';
+import { callAI, type QuizResponse, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +21,91 @@ interface QuizQuestion {
   correctIndex: number;
   explanation: string;
 }
+
+const QUIZ_HISTORY_LIMIT = 200;
+
+const getQuizHistoryKey = (
+  subject: string,
+  topic: string,
+  difficulty: Difficulty,
+  language: 'es' | 'en',
+  mode: 'preclinical' | 'clinical-study'
+) => {
+  const normalizedTopic = (topic || subject).toLowerCase().trim().replace(/\s+/g, '-');
+  return `medestudia_quiz_seen_${mode}_${language}_${difficulty}_${normalizedTopic}`;
+};
+
+const normalizeText = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const buildQuestionFingerprint = (question: QuizQuestion): string => {
+  const normalizedQuestion = normalizeText(question.question)
+    .split(' ')
+    .filter((w) => w.length > 2)
+    .slice(0, 14)
+    .join(' ');
+  const normalizedCorrect = normalizeText(question.options[question.correctIndex] || '');
+  return `${normalizedQuestion}::${normalizedCorrect}`;
+};
+
+const loadSeenFingerprints = (key: string): string[] => {
+  try {
+    const stored = localStorage.getItem(key);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveSeenFingerprints = (key: string, fingerprints: string[]) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(fingerprints.slice(-QUIZ_HISTORY_LIMIT)));
+  } catch {
+    // Ignore localStorage write errors
+  }
+};
+
+const sanitizeQuestions = (questions: QuizResponse['questions']): QuizQuestion[] =>
+  questions
+    .filter(
+      (q) =>
+        Boolean(q?.question) &&
+        Array.isArray(q?.options) &&
+        q.options.length === 4 &&
+        Number.isInteger(q.correctIndex) &&
+        q.correctIndex >= 0 &&
+        q.correctIndex < 4 &&
+        Boolean(q?.explanation)
+    )
+    .map((q) => ({
+      question: q.question.trim(),
+      options: q.options.map((o) => o.trim()),
+      correctIndex: q.correctIndex,
+      explanation: q.explanation.trim(),
+    }));
+
+const dedupeQuestions = (questions: QuizQuestion[], seenFingerprints: Set<string>): QuizQuestion[] => {
+  const unique: QuizQuestion[] = [];
+  const localFingerprints = new Set<string>();
+
+  for (const question of questions) {
+    const fingerprint = buildQuestionFingerprint(question);
+    if (!seenFingerprints.has(fingerprint) && !localFingerprints.has(fingerprint)) {
+      unique.push(question);
+      localFingerprints.add(fingerprint);
+    }
+  }
+
+  return unique;
+};
 
 // Context-aware placeholder examples
 const placeholderExamples: Record<string, { es: string; en: string }> = {
@@ -62,39 +147,68 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
     
     try {
       const apiMode = mode === 'clinical-study' ? 'clinico_estudio' : 'preclinico';
-      const response = await callAI({
-        tool: 'quiz',
-        mode: apiMode,
-        language,
-        input: topic || subject,
-        context: {
-          subject,
-          difficulty,
-          topic: topic || undefined,
-        },
-      });
+      const historyKey = getQuizHistoryKey(subject, topic, difficulty, language, mode);
+      const seenFromStorage = loadSeenFingerprints(historyKey);
+      const seenFingerprints = new Set(seenFromStorage);
+      const quizTopic = topic || subject;
+
+      const fetchQuizBatch = async (avoidQuestions: string[] = []): Promise<QuizQuestion[]> => {
+        const avoidText =
+          avoidQuestions.length > 0
+            ? language === 'es'
+              ? `\nEvita preguntas iguales o casi iguales a estas:\n- ${avoidQuestions.join('\n- ')}`
+              : `\nAvoid questions that are identical or very similar to these:\n- ${avoidQuestions.join('\n- ')}`
+            : '';
+
+        const response = await callAI({
+          tool: 'quiz',
+          mode: apiMode,
+          language,
+          input: `${quizTopic}${avoidText}`,
+          context: {
+            subject,
+            difficulty,
+            topic: topic || undefined,
+          },
+        });
+
+        if (isErrorResponse(response)) {
+          throw new Error(response.error || 'Unknown error from AI service');
+        }
+
+        const quiz = response as QuizResponse;
+        if (!quiz.questions || quiz.questions.length === 0) {
+          return [];
+        }
+        return sanitizeQuestions(quiz.questions);
+      };
+
+      const firstBatch = await fetchQuizBatch();
+      let uniqueQuestions = dedupeQuestions(firstBatch, seenFingerprints);
+
+      // Retry once with avoid list if we still don't have enough unique questions
+      if (uniqueQuestions.length < 5) {
+        const avoidQuestions = [
+          ...uniqueQuestions.map((q) => q.question).slice(0, 5),
+          ...firstBatch.map((q) => q.question).slice(0, 5),
+        ];
+        const secondBatch = await fetchQuizBatch(avoidQuestions);
+        uniqueQuestions = dedupeQuestions([...uniqueQuestions, ...secondBatch], seenFingerprints);
+      }
+
+      if (uniqueQuestions.length < 5) {
+        throw new Error(
+          language === 'es'
+            ? 'No se pudieron generar suficientes preguntas únicas. Intenta con otro tema.'
+            : 'Could not generate enough unique questions. Try a different topic.'
+        );
+      }
+
+      const quizQuestions = uniqueQuestions.slice(0, 5);
+      const newFingerprints = quizQuestions.map((q) => buildQuestionFingerprint(q));
+      saveSeenFingerprints(historyKey, [...seenFromStorage, ...newFingerprints]);
 
       updateStatus(true);
-
-      if (isErrorResponse(response)) {
-        throw new Error(response.error || 'Unknown error from AI service');
-      }
-
-      const quiz = response as QuizResponse;
-      
-      if (!quiz.questions || quiz.questions.length === 0) {
-        throw new Error(language === 'es' 
-          ? 'No se generaron preguntas. Por favor intenta de nuevo.'
-          : 'No questions generated. Please try again.');
-      }
-
-      // Ensure we have exactly 5 questions (take first 5 if more)
-      const quizQuestions = quiz.questions.slice(0, 5).map(q => ({
-        question: q.question,
-        options: q.options,
-        correctIndex: q.correctIndex,
-        explanation: q.explanation,
-      }));
 
       setQuestions(quizQuestions);
       setAnswers(new Array(quizQuestions.length).fill(null));

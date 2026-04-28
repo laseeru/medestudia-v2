@@ -212,6 +212,8 @@ Respond ONLY in valid JSON format (no markdown, no wrapping code) with this exac
 Genera exactamente 5 preguntas de opción múltiple médicas sobre el tema proporcionado.
 Cada pregunta debe tener 4 opciones REALES (nunca placeholders). Incluye explicaciones.
 Las preguntas deben cubrir diferentes aspectos del tema.
+EVITA repetir enunciados o variantes muy similares entre preguntas del mismo quiz.
+Cada pregunta debe evaluar un ángulo distinto (definición, fisiopatología, diagnóstico, manejo, complicaciones, prevención o epidemiología).
 Responde SOLO en formato JSON válido (sin markdown, sin código envolvente) con esta estructura exacta:
 {
   "questions": [
@@ -227,6 +229,8 @@ Responde SOLO en formato JSON válido (sin markdown, sin código envolvente) con
 Generate exactly 5 medical multiple choice questions about the provided topic.
 Each question must have 4 REAL options (never placeholders). Include explanations.
 Questions should cover different aspects of the topic.
+AVOID repeating stems or very similar variants across questions in the same quiz.
+Each question must test a different angle (definition, pathophysiology, diagnosis, management, complications, prevention, or epidemiology).
 Respond ONLY in valid JSON format (no markdown, no wrapping code) with this exact structure:
 {
   "questions": [
@@ -334,9 +338,11 @@ Options must be real and specific medical answers, NOT placeholders. The questio
   } else if (tool === 'quiz') {
     return isES
       ? `Genera exactamente 5 preguntas de opción múltiple médicas sobre "${topic}". ${subject ? `Contexto: ${subject}.` : ''}
-Las preguntas deben cubrir diferentes aspectos del tema y mencionar explícitamente "${topic}" o conceptos relacionados. Las opciones deben ser respuestas médicas reales.`
+Las preguntas deben cubrir diferentes aspectos del tema y mencionar explícitamente "${topic}" o conceptos relacionados. Las opciones deben ser respuestas médicas reales.
+Evita enunciados repetidos o casi repetidos en el mismo resultado.`
       : `Generate exactly 5 medical multiple choice questions about "${topic}". ${subject ? `Context: ${subject}.` : ''}
-Questions should cover different aspects of the topic and explicitly mention "${topic}" or related concepts. Options must be real medical answers.`;
+Questions should cover different aspects of the topic and explicitly mention "${topic}" or related concepts. Options must be real medical answers.
+Avoid repeated or near-duplicate stems within the same result.`;
   } else if (tool === 'explain') {
     return isES
       ? `Explica en detalle: "${topic}". ${subject ? `Contexto: ${subject}.` : ''}
