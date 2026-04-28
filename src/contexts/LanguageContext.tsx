@@ -93,6 +93,15 @@ const translations: Translations = {
   loading: { es: 'Cargando...', en: 'Loading...' },
 
   // Study Tools
+  studyToolsSection: { es: 'Herramientas de estudio', en: 'Study Tools' },
+  studyToolsSectionDesc: { es: 'Explora o estudia con IA', en: 'Explore or study with AI' },
+  medicalAssistant: { es: 'Asistente Médico', en: 'Medical Assistant' },
+  medicalAssistantDesc: { es: 'Explora conceptos médicos, resuelve dudas y desarrolla tu razonamiento clínico', en: 'Explore medical concepts, resolve doubts, and develop your clinical reasoning' },
+  medicalAssistantInputPlaceholder: { es: 'Escribe tu pregunta médica...', en: 'Write your medical question...' },
+  medicalAssistantExample: { es: 'Ej: ¿Por qué la anemia causa fatiga?', en: 'E.g.: Why does anemia cause fatigue?' },
+  askAssistant: { es: 'Preguntar', en: 'Ask' },
+  subjectsSection: { es: 'Asignaturas', en: 'Subjects' },
+  subjectsSectionDesc: { es: 'Selecciona qué contenido quieres estudiar', en: 'Select what content you want to study' },
   generateMCQ: { es: 'Practicar', en: 'Practice' },
   generateMCQDesc: { es: 'Practica con preguntas generadas dinámicamente', en: 'Practice with dynamically generated questions' },
   quickQuiz: { es: 'Evaluación Rápida', en: 'Rapid Assessment' },

@@ -148,10 +148,21 @@ Your responses must be specific to the topic consulted by the user.`;
         ? `${baseInstructions}
 Enfócate en explicar conceptos básicos de ciencias preclínicas, ayudando a comprender la teoría y su relevancia para la práctica clínica futura. 
 Siempre referencia explícitamente el tema o pregunta del usuario en tu respuesta.
+Si la pregunta no está relacionada con medicina, ciencias de la salud o contenidos académicos biomédicos, responde de forma breve que este asistente es solo para preguntas médicas y de ciencias de la salud.
+Si la pregunta no es médica, responde EXACTAMENTE con este texto y nada más: "Este asistente está diseñado para aprendizaje médico. Reformula tu pregunta en un contexto clínico o académico."
+Cuando la pregunta sí sea médica, organiza SIEMPRE tu respuesta en tres apartados y en este orden exacto:
+🧠 Reflexiona primero: (1-2 frases para guiar pensamiento)
+📌 Pista: (1-2 frases con una pista dirigida)
+📖 Explicación: (explicación clara y educativa)
 Responde en formato de texto natural, estructurado pero conversacional.`
         : `${baseInstructions}
 Focus on explaining basic concepts of preclinical sciences, helping understand theory and its relevance for future clinical practice.
 Always explicitly reference the user's topic or question in your response.
+If the query is not related to medicine, health sciences, or biomedical academic content, reply briefly that this assistant is for medical and health-science questions only.
+When the query is medical, ALWAYS structure the answer into three sections in this exact order:
+🧠 Think first: (1-2 guiding sentences)
+📌 Hint: (1-2 directed hints)
+📖 Explanation: (clear educational explanation)
 Respond in natural text format, structured but conversational.`;
     } else if (mode === 'clinico_estudio') {
       return isES
