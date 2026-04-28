@@ -24,6 +24,7 @@ interface ChatInterfaceProps {
   subject?: string;
   initialQuestion?: string;
   onInitialQuestionUsed?: () => void;
+  fullscreen?: boolean;
 }
 
 const getChatStorageKey = (mode: string, subject?: string) => {
@@ -47,7 +48,7 @@ const guidelinesPlaceholders = {
   ],
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQuestion, onInitialQuestionUsed }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQuestion, onInitialQuestionUsed, fullscreen = false }) => {
   const { t, language } = useLanguage();
   const { updateStatus } = useAIStatus();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -293,14 +294,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
   const groupedMessages = groupMessagesByRole(messages);
 
   return (
-    <div className="mx-auto w-full max-w-[800px] flex flex-col h-[540px] md:h-[640px] border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-      <div className="px-4 py-3 bg-muted/40 border-b border-border flex items-center justify-between gap-3">
+    <div
+      className={cn(
+        "w-full flex flex-col border border-border overflow-hidden bg-card shadow-sm",
+        fullscreen
+          ? "h-[calc(100dvh-150px)] min-h-[460px] rounded-none md:rounded-xl md:h-[calc(100vh-220px)] md:min-h-[560px]"
+          : "mx-auto max-w-[800px] h-[540px] md:h-[640px] rounded-xl"
+      )}
+    >
+      <div className="px-3 py-2.5 md:px-4 md:py-3 bg-muted/40 border-b border-border flex items-center justify-between gap-2 md:gap-3">
         <div className="flex items-center gap-2 text-sm text-foreground">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-          <span>{language === 'es' ? 'Asistente activo' : 'Assistant active'}</span>
+          <span className="text-xs md:text-sm">{language === 'es' ? 'Asistente activo' : 'Assistant active'}</span>
         </div>
         {mode === 'preclinical' && (
-          <span className="text-xs text-muted-foreground">
+          <span className="hidden sm:inline text-xs text-muted-foreground">
             {language === 'es' ? 'Modo: aprendizaje guiado' : 'Mode: guided learning'}
           </span>
         )}
@@ -316,7 +324,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 py-4 md:px-4 md:py-5 space-y-5 md:space-y-6">
         {groupedMessages.map((group, groupIndex) => (
           <div
             key={`${group.role}-${groupIndex}`}
@@ -332,7 +340,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
               {group.role === 'assistant' ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
             </div>
 
-            <div className="max-w-[84%] space-y-2">
+            <div className="max-w-[88%] md:max-w-[84%] space-y-2">
               {group.messages.map((message) => (
                 <div
                   key={message.id}
@@ -409,7 +417,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-border p-4 bg-card">
+      <div className="border-t border-border p-3 md:p-4 bg-card pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         {error && (
           <div className="mb-3 p-3 rounded-lg border border-amber-300/40 bg-amber-50/60 dark:border-amber-600/30 dark:bg-amber-900/15 flex items-start gap-2">
             <AlertCircle className="h-4 w-4 text-amber-700 dark:text-amber-300 flex-shrink-0 mt-0.5" />
@@ -425,7 +433,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
             : 'Ask a medical question or describe a clinical case'}
         </p>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-stretch">
           <input
             type="text"
             value={input}
@@ -433,12 +441,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
             onKeyPress={handleKeyPress}
             placeholder={getPlaceholder()}
             disabled={isTyping}
-            className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 min-h-11 rounded-lg border border-input bg-background px-3 md:px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <Button
             onClick={() => handleSend()}
             disabled={!input.trim() || isTyping}
-            className="shrink-0 px-4 bg-academic hover:bg-academic/90 text-white"
+            className="shrink-0 min-h-11 px-4 bg-academic hover:bg-academic/90 text-white"
           >
             <Send className={cn('h-4 w-4', isTyping && 'animate-pulse')} />
           </Button>

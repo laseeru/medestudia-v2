@@ -177,7 +177,7 @@ const Preclinical: React.FC = () => {
           </div>
         ) : activeLearningTool ? (
           /* Global learning tool mode (not tied to a specific subject) */
-          <div className="max-w-4xl mx-auto space-y-4 animate-fade-in">
+          <div className="w-full max-w-none mx-auto space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
               <button
                 onClick={handleBack}
@@ -189,12 +189,12 @@ const Preclinical: React.FC = () => {
                 {t('medicalAssistant')}
               </span>
             </div>
-            <div className="rounded-xl border border-border bg-card p-3 md:p-4">
-              <p className="mb-3 text-sm text-muted-foreground">{t('medicalAssistantDesc')}</p>
+            <div className="rounded-xl border border-border bg-card p-0 md:p-0 overflow-hidden">
                 <ChatInterface
                   mode="preclinical"
                   initialQuestion={initialAssistantQuestion}
                   onInitialQuestionUsed={() => setInitialAssistantQuestion('')}
+                  fullscreen
                 />
             </div>
           </div>
