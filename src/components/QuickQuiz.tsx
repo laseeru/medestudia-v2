@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Play, CheckCircle, XCircle, RotateCcw, Trophy, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
@@ -11,6 +11,7 @@ interface QuickQuizProps {
   subject: string;
   mode: 'preclinical' | 'clinical-study';
   variant?: 'preclinical' | 'clinical';
+  questionCount?: number;
 }
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -118,7 +119,7 @@ const placeholderExamples: Record<string, { es: string; en: string }> = {
 };
 
 
-const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclinical' }) => {
+const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclinical', questionCount = 5 }) => {
   const { t, language } = useLanguage();
   const { updateStatus } = useAIStatus();
   const { saveResult } = useScoreTracking();
@@ -132,6 +133,29 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
   const [isFinished, setIsFinished] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  const recommendedSeconds = useMemo(() => questionCount * 35, [questionCount]);
+
+  useEffect(() => {
+    if (!isStarted || isFinished || !startedAt) return;
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isStarted, isFinished, startedAt]);
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const difficultyLabel = (d: Difficulty) => {
+    const key = d === 'easy' ? 'basic' : d === 'medium' ? 'intermediate' : 'clinicalLevel';
+    return t(key);
+  };
 
   // Get context-aware placeholder
   const getPlaceholder = () => {
@@ -169,6 +193,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
             subject,
             difficulty,
             topic: topic || undefined,
+            questionCount,
           },
         });
 
@@ -187,16 +212,16 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
       let uniqueQuestions = dedupeQuestions(firstBatch, seenFingerprints);
 
       // Retry once with avoid list if we still don't have enough unique questions
-      if (uniqueQuestions.length < 5) {
+      if (uniqueQuestions.length < questionCount) {
         const avoidQuestions = [
-          ...uniqueQuestions.map((q) => q.question).slice(0, 5),
-          ...firstBatch.map((q) => q.question).slice(0, 5),
+          ...uniqueQuestions.map((q) => q.question).slice(0, questionCount),
+          ...firstBatch.map((q) => q.question).slice(0, questionCount),
         ];
         const secondBatch = await fetchQuizBatch(avoidQuestions);
         uniqueQuestions = dedupeQuestions([...uniqueQuestions, ...secondBatch], seenFingerprints);
       }
 
-      if (uniqueQuestions.length < 5) {
+      if (uniqueQuestions.length < questionCount) {
         throw new Error(
           language === 'es'
             ? 'No se pudieron generar suficientes preguntas únicas. Intenta con otro tema.'
@@ -204,7 +229,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
         );
       }
 
-      const quizQuestions = uniqueQuestions.slice(0, 5);
+      const quizQuestions = uniqueQuestions.slice(0, questionCount);
       const newFingerprints = quizQuestions.map((q) => buildQuestionFingerprint(q));
       saveSeenFingerprints(historyKey, [...seenFromStorage, ...newFingerprints]);
 
@@ -216,6 +241,8 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
       setSelectedAnswer(null);
       setIsStarted(true);
       setIsFinished(false);
+      setStartedAt(Date.now());
+      setElapsedSeconds(0);
       setIsLoading(false);
     } catch (err: any) {
       updateStatus(false);
@@ -267,6 +294,8 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
     setAnswers([]);
     setCurrentIndex(0);
     setSelectedAnswer(null);
+    setStartedAt(null);
+    setElapsedSeconds(0);
   };
 
   // Use academic blue for both variants
@@ -279,7 +308,13 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
         <div className="text-center">
           <Trophy className="h-12 w-12 mx-auto text-warning mb-4" />
           <h3 className="text-lg font-serif font-bold text-foreground mb-2">{t('quickQuiz')}</h3>
-          <p className="text-sm text-muted-foreground">{t('quickQuizIntro')}</p>
+          <p className="text-sm text-muted-foreground">
+            {variant === 'preclinical'
+              ? language === 'es'
+                ? `${questionCount} preguntas con retroalimentación al final`
+                : `${questionCount} questions with end-of-test feedback`
+              : t('quickQuizIntro')}
+          </p>
         </div>
 
         {error && (
@@ -326,7 +361,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   )}
                 >
-                  {t(d)}
+                {difficultyLabel(d)}
                 </button>
               ))}
             </div>
@@ -400,18 +435,26 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
         <span className="text-sm text-muted-foreground">
           {t('question')} {currentIndex + 1} / {questions.length}
         </span>
-        <div className="flex gap-1">
-          {questions.map((_, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                "w-2 h-2 rounded-full",
-                idx < currentIndex ? (answers[idx] === questions[idx].correctIndex ? "bg-success" : "bg-destructive")
-                  : idx === currentIndex ? colorClass
-                  : "bg-muted"
-              )}
-            />
-          ))}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {t('elapsedTime')}: {formatDuration(elapsedSeconds)}
+          </span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            {t('recommendedPace')}: ~{formatDuration(recommendedSeconds)}
+          </span>
+          <div className="flex gap-1">
+            {questions.map((_, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "w-2 h-2 rounded-full",
+                  idx < currentIndex ? (answers[idx] === questions[idx].correctIndex ? "bg-success" : "bg-destructive")
+                    : idx === currentIndex ? colorClass
+                    : "bg-muted"
+                )}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

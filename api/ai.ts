@@ -38,6 +38,7 @@ interface AIRequest {
     system?: string;
     difficulty?: 'easy' | 'medium' | 'hard';
     topic?: string;
+    questionCount?: number;
   };
 }
 
@@ -209,7 +210,7 @@ Respond ONLY in valid JSON format (no markdown, no wrapping code) with this exac
   } else if (tool === 'quiz') {
     return isES
       ? `${baseInstructions}
-Genera exactamente 5 preguntas de opción múltiple médicas sobre el tema proporcionado.
+Genera exactamente el número de preguntas solicitado en el prompt del usuario sobre el tema proporcionado.
 Cada pregunta debe tener 4 opciones REALES (nunca placeholders). Incluye explicaciones.
 Las preguntas deben cubrir diferentes aspectos del tema.
 EVITA repetir enunciados o variantes muy similares entre preguntas del mismo quiz.
@@ -226,7 +227,7 @@ Responde SOLO en formato JSON válido (sin markdown, sin código envolvente) con
   ]
 }`
       : `${baseInstructions}
-Generate exactly 5 medical multiple choice questions about the provided topic.
+Generate exactly the number of medical multiple choice questions requested in the user prompt about the provided topic.
 Each question must have 4 REAL options (never placeholders). Include explanations.
 Questions should cover different aspects of the topic.
 AVOID repeating stems or very similar variants across questions in the same quiz.
@@ -310,6 +311,7 @@ function buildUserPrompt(req: AIRequest): string {
   const topic = context?.topic || input;
   const subject = context?.subject || context?.rotation || context?.system;
   const difficulty = context?.difficulty || 'medium';
+  const questionCount = Math.max(3, Math.min(context?.questionCount || 5, 15));
 
   if (tool === 'chat') {
     let prompt = isES
@@ -337,10 +339,10 @@ Las opciones deben ser respuestas médicas reales y específicas, NO placeholder
 Options must be real and specific medical answers, NOT placeholders. The question must explicitly mention "${topic}".`;
   } else if (tool === 'quiz') {
     return isES
-      ? `Genera exactamente 5 preguntas de opción múltiple médicas sobre "${topic}". ${subject ? `Contexto: ${subject}.` : ''}
+      ? `Genera exactamente ${questionCount} preguntas de opción múltiple médicas sobre "${topic}". ${subject ? `Contexto: ${subject}.` : ''}
 Las preguntas deben cubrir diferentes aspectos del tema y mencionar explícitamente "${topic}" o conceptos relacionados. Las opciones deben ser respuestas médicas reales.
 Evita enunciados repetidos o casi repetidos en el mismo resultado.`
-      : `Generate exactly 5 medical multiple choice questions about "${topic}". ${subject ? `Context: ${subject}.` : ''}
+      : `Generate exactly ${questionCount} medical multiple choice questions about "${topic}". ${subject ? `Context: ${subject}.` : ''}
 Questions should cover different aspects of the topic and explicitly mention "${topic}" or related concepts. Options must be real medical answers.
 Avoid repeated or near-duplicate stems within the same result.`;
   } else if (tool === 'explain') {

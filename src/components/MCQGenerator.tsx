@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
-import { callAI, type MCQResponse, type Difficulty, isErrorResponse } from '@/lib/aiClient';
+import { callAI, type MCQResponse, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +60,10 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
   const [isLoading, setIsLoading] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const difficultyLabel = (d: Difficulty) => {
+    const key = d === 'easy' ? 'basic' : d === 'medium' ? 'intermediate' : 'clinicalLevel';
+    return t(key);
+  };
 
   // Get context-aware placeholder
   const getPlaceholder = () => {
@@ -177,7 +181,7 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
               >
-                {t(d)}
+                {difficultyLabel(d)}
               </button>
             ))}
           </div>

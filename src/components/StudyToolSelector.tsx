@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileQuestion, Zap, BookOpen, BarChart3 } from 'lucide-react';
+import { Dumbbell, ClipboardCheck, BookOpen, LineChart } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
@@ -19,10 +19,10 @@ const StudyToolSelector: React.FC<StudyToolSelectorProps> = ({
   const { t } = useLanguage();
 
   const tools = [
-    { key: 'mcq' as StudyTool, icon: FileQuestion, label: t('generateMCQ'), desc: t('generateMCQDesc') },
-    { key: 'quiz' as StudyTool, icon: Zap, label: t('quickQuiz'), desc: t('quickQuizDesc') },
+    { key: 'mcq' as StudyTool, icon: Dumbbell, label: t('generateMCQ'), desc: t('generateMCQDesc') },
+    { key: 'quiz' as StudyTool, icon: ClipboardCheck, label: t('quickQuiz'), desc: t('quickQuizDesc') },
     { key: 'explain' as StudyTool, icon: BookOpen, label: t('explainTopic'), desc: t('explainTopicDesc') },
-    { key: 'stats' as StudyTool, icon: BarChart3, label: t('viewStats'), desc: t('viewStatsDesc') },
+    { key: 'stats' as StudyTool, icon: LineChart, label: t('viewStats'), desc: t('viewStatsDesc') },
   ];
 
   // Use same academic blue for both variants
@@ -31,7 +31,7 @@ const StudyToolSelector: React.FC<StudyToolSelectorProps> = ({
   const selectedBg = 'bg-academic/20 border-academic';
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {tools.map((tool) => (
         <button
           key={tool.key}

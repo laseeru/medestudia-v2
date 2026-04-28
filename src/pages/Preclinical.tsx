@@ -54,7 +54,7 @@ const Preclinical: React.FC = () => {
       case 'mcq':
         return <MCQGenerator subject={subject} variant="preclinical" />;
       case 'quiz':
-        return <QuickQuiz subject={subject} mode="preclinical" variant="preclinical" />;
+        return <QuickQuiz subject={subject} mode="preclinical" variant="preclinical" questionCount={10} />;
       case 'explain':
         return <TopicExplainer subject={subject} mode="preclinical" variant="preclinical" />;
       case 'stats':

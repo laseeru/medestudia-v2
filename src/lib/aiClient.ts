@@ -13,6 +13,7 @@ export interface AIContext {
   system?: string;
   difficulty?: Difficulty;
   topic?: string;
+  questionCount?: number;
 }
 
 export interface AIRequest {
