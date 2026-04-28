@@ -12,11 +12,23 @@ interface Message {
   content: string;
   error?: boolean;
   retryable?: boolean;
+  learningFlow?: LearningFlow;
 }
 
 interface MessageGroup {
   role: Message['role'];
   messages: Message[];
+}
+
+type LearningStage = 'reflection' | 'hint' | 'explanation';
+
+interface LearningFlow {
+  uiLanguage: 'es' | 'en';
+  currentStage: LearningStage;
+  reflectionPrompt: string;
+  hint: string;
+  explanation: string;
+  reflectionInput?: string;
 }
 
 interface ChatInterfaceProps {
@@ -76,17 +88,34 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     return groups;
   };
 
-  const getFriendlyErrorMessage = () => {
-    return language === 'es'
+  const getFriendlyErrorMessage = (detectedLanguage: 'es' | 'en') => {
+    return detectedLanguage === 'es'
       ? 'Hubo un problema al procesar tu solicitud. Intenta nuevamente.'
       : 'There was a problem processing your request. Please try again.';
   };
 
-  const formatAssistantContent = (content: string) => {
-    const fallbackHint = language === 'es'
+  const detectInputLanguage = (text: string): 'es' | 'en' => {
+    const normalized = text.toLowerCase();
+    const spanishSignals = [
+      /\b(el|la|los|las|un|una|qué|como|cómo|por qué|porque|sí|también|dónde|cuando|cuándo|dolor|paciente|enfermedad|tratamiento|diagnóstico)\b/,
+      /[áéíóúñ¿¡]/,
+    ];
+    const englishSignals = [
+      /\b(the|is|are|why|how|what|where|when|pain|patient|disease|treatment|diagnosis)\b/,
+    ];
+
+    const esScore = spanishSignals.reduce((acc, pattern) => acc + (pattern.test(normalized) ? 1 : 0), 0);
+    const enScore = englishSignals.reduce((acc, pattern) => acc + (pattern.test(normalized) ? 1 : 0), 0);
+
+    if (enScore > esScore) return 'en';
+    return 'es';
+  };
+
+  const formatAssistantContent = (content: string, uiLanguage: 'es' | 'en') => {
+    const fallbackHint = uiLanguage === 'es'
       ? 'Identifica primero el concepto clave (fisiopatología, diagnóstico o manejo).'
       : 'Identify first the key concept (pathophysiology, diagnosis, or management).';
-    const fallbackReflection = language === 'es'
+    const fallbackReflection = uiLanguage === 'es'
       ? 'Antes de leer toda la respuesta, intenta explicarlo con tus propias palabras.'
       : 'Before reading the full answer, try explaining it in your own words.';
     const firstSentence = content.split('\n').map((line) => line.trim()).filter(Boolean)[0] || fallbackHint;
@@ -113,6 +142,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
       hint: hintMatch?.[1]?.trim() || firstSentence,
       explanation: explanationMatch?.[1]?.trim() || content,
     };
+  };
+
+  const buildLearningFlow = (content: string, uiLanguage: 'es' | 'en'): LearningFlow => {
+    const sections = formatAssistantContent(content, uiLanguage);
+    return {
+      uiLanguage,
+      currentStage: 'reflection',
+      reflectionPrompt:
+        uiLanguage === 'es'
+          ? 'Antes de ver la respuesta, ¿cómo lo explicarías tú?'
+          : 'Before seeing the answer, how would you explain it?',
+      hint: sections.hint,
+      explanation: sections.explanation,
+    };
+  };
+
+  const updateLearningFlow = (messageId: string, updater: (flow: LearningFlow) => LearningFlow) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== messageId) return msg;
+        const baseFlow = msg.learningFlow || buildLearningFlow(msg.content, language);
+        return { ...msg, learningFlow: updater(baseFlow) };
+      }),
+    );
   };
 
   useEffect(() => {
@@ -179,6 +232,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
   const handleSend = async (retryInput?: string) => {
     const userQuery = (retryInput || input).trim();
     if (!userQuery) return;
+    const detectedLanguage = detectInputLanguage(userQuery);
 
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: userQuery };
     setMessages((prev) => [...prev, userMessage]);
@@ -194,7 +248,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
       const request = {
         tool,
         mode: apiMode,
-        language,
+        language: detectedLanguage,
         input: userQuery,
         context: subject ? { subject } : undefined,
       };
@@ -211,11 +265,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
         });
 
         if (apiMode === 'clinico_estudio') {
-          const note = language === 'es'
+          const note = detectedLanguage === 'es'
             ? 'Modo educativo — caso hipotético para fines de aprendizaje'
             : 'Educational mode — hypothetical case for learning purposes';
           setMessages((prev) =>
             prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: `${msg.content}\n\n[${note}]` } : msg)),
+          );
+        }
+
+        if (apiMode === 'preclinico') {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? { ...msg, learningFlow: buildLearningFlow(msg.content, detectedLanguage) }
+                : msg,
+            ),
           );
         }
 
@@ -246,7 +310,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
       setIsTyping(false);
     } catch {
       updateStatus(false);
-      const errorMessage = getFriendlyErrorMessage();
+      const errorMessage = getFriendlyErrorMessage(detectedLanguage);
       setError(errorMessage);
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -278,6 +342,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleContinueFromReflection = (messageId: string) => {
+    updateLearningFlow(messageId, (flow) => ({ ...flow, currentStage: 'hint' }));
+  };
+
+  const handleRevealExplanation = (messageId: string) => {
+    updateLearningFlow(messageId, (flow) => ({ ...flow, currentStage: 'explanation' }));
   };
 
   const getPlaceholder = () => {
@@ -356,22 +428,58 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                   {group.role === 'assistant' && !message.error && mode === 'preclinical' ? (
                     <div className="space-y-2">
                       {(() => {
-                        const sections = formatAssistantContent(message.content);
+                        const flow = message.learningFlow || buildLearningFlow(message.content, language);
+                        const isSpanish = flow.uiLanguage === 'es';
+
+                        if (flow.currentStage === 'reflection') {
+                          return (
+                            <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
+                              <p className="text-[11px] font-medium text-muted-foreground mb-1">🧠 {isSpanish ? 'Reflexiona primero' : 'Think first'}</p>
+                              <p className="whitespace-pre-wrap mb-3">{flow.reflectionPrompt}</p>
+                              <input
+                                type="text"
+                                value={flow.reflectionInput || ''}
+                                onChange={(e) =>
+                                  updateLearningFlow(message.id, (current) => ({
+                                    ...current,
+                                    reflectionInput: e.target.value,
+                                  }))
+                                }
+                                placeholder={isSpanish ? 'Escribe tu razonamiento...' : 'Write your reasoning...'}
+                                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                              />
+                              <Button
+                                size="sm"
+                                className="mt-3 bg-academic hover:bg-academic/90 text-white"
+                                onClick={() => handleContinueFromReflection(message.id)}
+                              >
+                                {isSpanish ? 'Continuar' : 'Continue'}
+                              </Button>
+                            </div>
+                          );
+                        }
+
+                        if (flow.currentStage === 'hint') {
+                          return (
+                            <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
+                              <p className="text-[11px] font-medium text-muted-foreground mb-1">📌 {isSpanish ? 'Pista' : 'Hint'}</p>
+                              <p className="whitespace-pre-wrap mb-3">{flow.hint}</p>
+                              <Button
+                                size="sm"
+                                className="bg-academic hover:bg-academic/90 text-white"
+                                onClick={() => handleRevealExplanation(message.id)}
+                              >
+                                {isSpanish ? 'Ver explicación completa' : 'See full explanation'}
+                              </Button>
+                            </div>
+                          );
+                        }
+
                         return (
-                          <>
-                            <div className="rounded-lg border border-border/60 bg-background/50 p-3">
-                              <p className="text-[11px] font-medium text-muted-foreground mb-1">🧠 {language === 'es' ? 'Reflexiona primero' : 'Think first'}</p>
-                              <p className="whitespace-pre-wrap">{sections.reflection}</p>
-                            </div>
-                            <div className="rounded-lg border border-border/60 bg-background/50 p-3">
-                              <p className="text-[11px] font-medium text-muted-foreground mb-1">📌 {language === 'es' ? 'Pista' : 'Hint'}</p>
-                              <p className="whitespace-pre-wrap">{sections.hint}</p>
-                            </div>
-                            <div className="rounded-lg border border-border/60 bg-background/50 p-3">
-                              <p className="text-[11px] font-medium text-muted-foreground mb-1">📖 {language === 'es' ? 'Explicación' : 'Explanation'}</p>
-                              <p className="whitespace-pre-wrap">{sections.explanation}</p>
-                            </div>
-                          </>
+                          <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
+                            <p className="text-[11px] font-medium text-muted-foreground mb-1">📖 {isSpanish ? 'Explicación' : 'Explanation'}</p>
+                            <p className="whitespace-pre-wrap">{flow.explanation}</p>
+                          </div>
                         );
                       })()}
                     </div>
