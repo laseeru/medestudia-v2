@@ -77,6 +77,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastAutoSentQuestionRef = useRef<string | null>(null);
   const lastLoadedSessionKeyRef = useRef<string | null>(null);
+  const conversationStartedRef = useRef<boolean>(false);
 
   const generateSessionId = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -193,8 +194,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     const metaKey = getSessionMetaKey(mode, subject);
     let nextSessionId = generateSessionId();
     try {
-      const storedSessionId = localStorage.getItem(metaKey);
-      if (storedSessionId) {
+      const hasPendingInitialQuestion = Boolean(initialQuestion?.trim());
+      const storedSessionId = hasPendingInitialQuestion ? null : localStorage.getItem(metaKey);
+      if (storedSessionId && !hasPendingInitialQuestion) {
         nextSessionId = storedSessionId;
       } else {
         localStorage.setItem(metaKey, nextSessionId);
@@ -202,8 +204,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     } catch {
       // Ignore localStorage errors
     }
-    setSessionId(nextSessionId);
-  }, [mode, subject]);
+    // #region agent log
+    fetch('http://127.0.0.1:7313/ingest/7e809d74-e764-45c8-bb2b-2462fde74644',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7322ae'},body:JSON.stringify({sessionId:'7322ae',runId:'pre-fix-1',hypothesisId:'H4',location:'ChatInterface.tsx:session-init-effect',message:'session initialized for chat view',data:{mode,subject:subject||null,nextSessionIdLength:nextSessionId.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    // Do not overwrite a session that may have been created by an in-flight send.
+    setSessionId((prev) => prev || nextSessionId);
+  }, [mode, subject, initialQuestion]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -228,9 +234,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     // If a pending initial question exists, avoid injecting welcome text
     // so auto-send can start a clean question-first session.
     if (initialQuestion?.trim()) {
+      // #region agent log
+      fetch('http://127.0.0.1:7313/ingest/7e809d74-e764-45c8-bb2b-2462fde74644',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7322ae'},body:JSON.stringify({sessionId:'7322ae',runId:'pre-fix-1',hypothesisId:'H5',location:'ChatInterface.tsx:hydration-effect',message:'initialQuestion present; skipping welcome injection',data:{sessionIdLength:sessionId.length,initialQuestionLength:initialQuestion.trim().length,sessionLoadKey},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       setMessages([]);
       return;
     }
+
+    if (conversationStartedRef.current) {
+      // #region agent log
+      fetch('http://127.0.0.1:7313/ingest/7e809d74-e764-45c8-bb2b-2462fde74644',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7322ae'},body:JSON.stringify({sessionId:'7322ae',runId:'post-fix-1',hypothesisId:'H7',location:'ChatInterface.tsx:hydration-effect',message:'conversation already started; skip welcome injection',data:{sessionIdLength:sessionId.length,sessionLoadKey},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      return;
+    }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7313/ingest/7e809d74-e764-45c8-bb2b-2462fde74644',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7322ae'},body:JSON.stringify({sessionId:'7322ae',runId:'pre-fix-1',hypothesisId:'H5',location:'ChatInterface.tsx:hydration-effect',message:'welcome injection path taken',data:{sessionIdLength:sessionId.length,initialQuestionLength:initialQuestion?.trim().length||0,sessionLoadKey},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     const getWelcomeMessage = (): string => {
       if (mode === 'preclinical') {
@@ -267,6 +287,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     const normalized = initialQuestion.trim();
     if (lastAutoSentQuestionRef.current === normalized) return;
 
+    // #region agent log
+    fetch('http://127.0.0.1:7313/ingest/7e809d74-e764-45c8-bb2b-2462fde74644',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7322ae'},body:JSON.stringify({sessionId:'7322ae',runId:'pre-fix-1',hypothesisId:'H6',location:'ChatInterface.tsx:initialQuestion-effect',message:'auto-send initialQuestion triggered',data:{normalizedLength:normalized.length,isTyping,sessionIdLength:sessionId.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     lastAutoSentQuestionRef.current = normalized;
     handleSend(normalized);
     onInitialQuestionUsed?.();
@@ -278,6 +301,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     if (!userQuery) return;
     const detectedLanguage = detectInputLanguage(userQuery);
     let activeSessionId = sessionId;
+    conversationStartedRef.current = true;
+    // #region agent log
+    fetch('http://127.0.0.1:7313/ingest/7e809d74-e764-45c8-bb2b-2462fde74644',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7322ae'},body:JSON.stringify({sessionId:'7322ae',runId:'post-fix-1',hypothesisId:'H7',location:'ChatInterface.tsx:handleSend',message:'conversation marked started',data:{retryInput:Boolean(retryInput),userQueryLength:userQuery.length,sessionIdLength:sessionId.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     if (!activeSessionId) {
       activeSessionId = generateSessionId();
