@@ -191,6 +191,58 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     );
   };
 
+  const getPendingReflectionMessage = (): Message | undefined => {
+    return [...messages].reverse().find(
+      (m) =>
+        m.role === 'assistant' &&
+        !!m.learningFlow &&
+        m.learningFlow.currentStage === 'reflection' &&
+        !m.learningFlow.isGeneratingReflection,
+    );
+  };
+
+  const generateGuidanceFromReflection = async (messageId: string, flow: LearningFlow, reflectionText: string) => {
+    updateLearningFlow(messageId, (current) => ({
+      ...current,
+      reflectionInput: reflectionText,
+      currentStage: 'hint',
+      isGeneratingGuidance: true,
+    }));
+
+    try {
+      if (!flow.sourceQuestion) {
+        updateLearningFlow(messageId, (current) => ({ ...current, isGeneratingGuidance: false }));
+        return;
+      }
+
+      const coachResponse = await callAI({
+        tool: 'coach',
+        mode: 'preclinico',
+        language: flow.uiLanguage,
+        input: flow.sourceQuestion,
+        session_id: sessionId,
+        context: {
+          subject,
+          topic: flow.sourceQuestion,
+          learnerReflection: reflectionText,
+        },
+      });
+
+      if (!isErrorResponse(coachResponse) && coachResponse.type === 'coach') {
+        updateLearningFlow(messageId, (current) => ({
+          ...current,
+          hint: coachResponse.hint,
+          explanation: coachResponse.explanation,
+          isGeneratingGuidance: false,
+        }));
+      } else {
+        updateLearningFlow(messageId, (current) => ({ ...current, isGeneratingGuidance: false }));
+      }
+    } catch {
+      updateLearningFlow(messageId, (current) => ({ ...current, isGeneratingGuidance: false }));
+    }
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -307,6 +359,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     if (!retryInput) setInput('');
     setIsTyping(true);
     setError(null);
+
+    const pendingReflectionMessage = getPendingReflectionMessage();
+    if (pendingReflectionMessage?.learningFlow) {
+      await generateGuidanceFromReflection(
+        pendingReflectionMessage.id,
+        pendingReflectionMessage.learningFlow,
+        userQuery,
+      );
+      updateStatus(true);
+      setIsTyping(false);
+      return;
+    }
 
     try {
       const tool: 'chat' | 'guides' = mode === 'clinical-guidelines' ? 'guides' : 'chat';
@@ -438,53 +502,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-    }
-  };
-
-  const handleContinueFromReflection = async (messageId: string) => {
-    updateLearningFlow(messageId, (flow) => ({
-      ...flow,
-      currentStage: 'hint',
-      isGeneratingGuidance: true,
-    }));
-
-    let flowSnapshot: LearningFlow | null = null;
-    const targetMessage = messages.find((m) => m.id === messageId);
-    if (targetMessage?.learningFlow) {
-      flowSnapshot = targetMessage.learningFlow;
-    }
-
-    try {
-      if (!flowSnapshot?.sourceQuestion) {
-        updateLearningFlow(messageId, (flow) => ({ ...flow, isGeneratingGuidance: false }));
-        return;
-      }
-
-      const coachResponse = await callAI({
-        tool: 'coach',
-        mode: 'preclinico',
-        language: flowSnapshot.uiLanguage,
-        input: flowSnapshot.sourceQuestion,
-        session_id: sessionId,
-        context: {
-          subject,
-          topic: flowSnapshot.sourceQuestion,
-          learnerReflection: flowSnapshot.reflectionInput || '',
-        },
-      });
-
-      if (!isErrorResponse(coachResponse) && coachResponse.type === 'coach') {
-        updateLearningFlow(messageId, (flow) => ({
-          ...flow,
-          hint: coachResponse.hint,
-          explanation: coachResponse.explanation,
-          isGeneratingGuidance: false,
-        }));
-      } else {
-        updateLearningFlow(messageId, (flow) => ({ ...flow, isGeneratingGuidance: false }));
-      }
-    } catch {
-      updateLearningFlow(messageId, (flow) => ({ ...flow, isGeneratingGuidance: false }));
     }
   };
 
@@ -630,13 +647,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                                     ? 'No se pudo generar una reflexión para esta pregunta.'
                                     : 'Could not generate a reflection for this question.'}
                                 </p>
-                                <Button
-                                  size="sm"
-                                  className="bg-academic hover:bg-academic/90 text-white"
-                                  onClick={() => handleContinueFromReflection(message.id)}
-                                >
-                                  {isSpanish ? 'Continuar' : 'Continue'}
-                                </Button>
+                                <p className="text-sm text-muted-foreground">
+                                  {isSpanish
+                                    ? 'Responde en el cuadro de abajo para continuar con una pista.'
+                                    : 'Reply in the chat box below to continue with a hint.'}
+                                </p>
                               </div>
                             );
                           }
@@ -645,25 +660,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                             <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
                               <p className="text-[11px] font-medium text-muted-foreground mb-1">🧠 {isSpanish ? 'Reflexiona primero' : 'Think first'}</p>
                               <p className="whitespace-pre-wrap mb-3">{flow.reflectionPrompt}</p>
-                              <input
-                                type="text"
-                                value={flow.reflectionInput || ''}
-                                onChange={(e) =>
-                                  updateLearningFlow(message.id, (current) => ({
-                                    ...current,
-                                    reflectionInput: e.target.value,
-                                  }))
-                                }
-                                placeholder={isSpanish ? 'Escribe tu razonamiento...' : 'Write your reasoning...'}
-                                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                              />
-                              <Button
-                                size="sm"
-                                className="mt-3 bg-academic hover:bg-academic/90 text-white"
-                                onClick={() => handleContinueFromReflection(message.id)}
-                              >
-                                {isSpanish ? 'Continuar' : 'Continue'}
-                              </Button>
+                              <p className="text-sm text-muted-foreground">
+                                {isSpanish
+                                  ? 'Responde en el cuadro de abajo para continuar con la pista.'
+                                  : 'Reply in the chat box below to continue to the hint.'}
+                              </p>
                             </div>
                           );
                         }
@@ -674,7 +675,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                               <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
                                 <p className="text-[11px] font-medium text-muted-foreground mb-1">📌 {isSpanish ? 'Pista' : 'Hint'}</p>
                                 <p className="text-sm text-muted-foreground animate-pulse">
-                                  {isSpanish ? 'Generando pista personalizada...' : 'Generating personalized hint...'}
+                                  {isSpanish ? 'Pensando en una pista para ti...' : 'Thinking of a hint for you...'}
                                 </p>
                               </div>
                             );
@@ -707,6 +708,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                             <div className="rounded-lg border border-border/60 bg-background/50 p-3">
                               <p className="text-[11px] font-medium text-muted-foreground mb-1">📖 {isSpanish ? 'Explicación' : 'Explanation'}</p>
                               <p className="whitespace-pre-wrap">{flow.explanation}</p>
+                              <p className="mt-3 text-xs text-muted-foreground">
+                                {isSpanish
+                                  ? 'Si tienes más preguntas o necesitas aclaración adicional, escríbela y seguimos paso a paso.'
+                                  : 'If you have more questions or need further clarification, send it and we will continue step by step.'}
+                              </p>
                             </div>
                           </div>
                         );
