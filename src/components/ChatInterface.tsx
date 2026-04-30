@@ -30,6 +30,8 @@ interface LearningFlow {
   explanation: string;
   reflectionInput?: string;
   isGeneratingReflection?: boolean;
+  isGeneratingGuidance?: boolean;
+  sourceQuestion?: string;
 }
 
 interface ChatInterfaceProps {
@@ -163,7 +165,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     content: string,
     uiLanguage: 'es' | 'en',
     reflectionPromptOverride?: string | null,
-    isGeneratingReflection = false
+    isGeneratingReflection = false,
+    sourceQuestion?: string
   ): LearningFlow => {
     const sections = formatAssistantContent(content, uiLanguage);
     return {
@@ -173,6 +176,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
       hint: sections.hint,
       explanation: sections.explanation,
       isGeneratingReflection,
+      isGeneratingGuidance: false,
+      sourceQuestion,
     };
   };
 
@@ -338,7 +343,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
             content: '',
             ...(apiMode === 'preclinico'
               ? {
-                  learningFlow: buildLearningFlow('', detectedLanguage, null, true),
+                  learningFlow: buildLearningFlow('', detectedLanguage, null, true, userQuery),
                 }
               : {}),
           },
@@ -369,7 +374,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMessageId
-                ? { ...msg, learningFlow: buildLearningFlow(msg.content, detectedLanguage, reflectionPrompt, false) }
+                ? { ...msg, learningFlow: buildLearningFlow(msg.content, detectedLanguage, reflectionPrompt, false, userQuery) }
                 : msg,
             ),
           );
@@ -436,8 +441,51 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     }
   };
 
-  const handleContinueFromReflection = (messageId: string) => {
-    updateLearningFlow(messageId, (flow) => ({ ...flow, currentStage: 'hint' }));
+  const handleContinueFromReflection = async (messageId: string) => {
+    updateLearningFlow(messageId, (flow) => ({
+      ...flow,
+      currentStage: 'hint',
+      isGeneratingGuidance: true,
+    }));
+
+    let flowSnapshot: LearningFlow | null = null;
+    const targetMessage = messages.find((m) => m.id === messageId);
+    if (targetMessage?.learningFlow) {
+      flowSnapshot = targetMessage.learningFlow;
+    }
+
+    try {
+      if (!flowSnapshot?.sourceQuestion) {
+        updateLearningFlow(messageId, (flow) => ({ ...flow, isGeneratingGuidance: false }));
+        return;
+      }
+
+      const coachResponse = await callAI({
+        tool: 'coach',
+        mode: 'preclinico',
+        language: flowSnapshot.uiLanguage,
+        input: flowSnapshot.sourceQuestion,
+        session_id: sessionId,
+        context: {
+          subject,
+          topic: flowSnapshot.sourceQuestion,
+          learnerReflection: flowSnapshot.reflectionInput || '',
+        },
+      });
+
+      if (!isErrorResponse(coachResponse) && coachResponse.type === 'coach') {
+        updateLearningFlow(messageId, (flow) => ({
+          ...flow,
+          hint: coachResponse.hint,
+          explanation: coachResponse.explanation,
+          isGeneratingGuidance: false,
+        }));
+      } else {
+        updateLearningFlow(messageId, (flow) => ({ ...flow, isGeneratingGuidance: false }));
+      }
+    } catch {
+      updateLearningFlow(messageId, (flow) => ({ ...flow, isGeneratingGuidance: false }));
+    }
   };
 
   const handleRevealExplanation = (messageId: string) => {
@@ -621,6 +669,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                         }
 
                         if (flow.currentStage === 'hint') {
+                          if (flow.isGeneratingGuidance) {
+                            return (
+                              <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
+                                <p className="text-[11px] font-medium text-muted-foreground mb-1">📌 {isSpanish ? 'Pista' : 'Hint'}</p>
+                                <p className="text-sm text-muted-foreground animate-pulse">
+                                  {isSpanish ? 'Generando pista personalizada...' : 'Generating personalized hint...'}
+                                </p>
+                              </div>
+                            );
+                          }
                           return (
                             <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
                               <p className="text-[11px] font-medium text-muted-foreground mb-1">📌 {isSpanish ? 'Pista' : 'Hint'}</p>

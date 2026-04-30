@@ -28,7 +28,7 @@ declare const process: {
 
 // Request/Response types
 interface AIRequest {
-  tool: 'chat' | 'mcq' | 'quiz' | 'explain' | 'guides' | 'reflect';
+  tool: 'chat' | 'mcq' | 'quiz' | 'explain' | 'guides' | 'reflect' | 'coach';
   mode: 'preclinico' | 'clinico_estudio' | 'clinico_guias';
   language: 'es' | 'en';
   input: string;
@@ -40,6 +40,7 @@ interface AIRequest {
     difficulty?: 'easy' | 'medium' | 'hard';
     topic?: string;
     questionCount?: number;
+    learnerReflection?: string;
   };
 }
 
@@ -93,7 +94,13 @@ interface ReflectResponse {
   prompt: string;
 }
 
-type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse | ReflectResponse;
+interface CoachResponse {
+  type: 'coach';
+  hint: string;
+  explanation: string;
+}
+
+type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse | ReflectResponse | CoachResponse;
 
 // Error response type
 interface ErrorResponse {
@@ -112,6 +119,7 @@ const TOKEN_LIMITS = {
   chat: 700,     // Conversational responses
   guides: 1100,  // Structured guidelines
   reflect: 180,  // Short guiding reflection prompt
+  coach: 380,    // Hint + corrective explanation
 };
 const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
@@ -160,6 +168,21 @@ Rules:
 - Match the language of the user
 - Do NOT include greetings
 - Return only the reflection prompt text`;
+  } else if (tool === 'coach') {
+    return `You are a medical educator. Given the student's question and reflection, produce guidance in the same language as the student.
+
+Rules:
+- Do NOT include greetings
+- Keep output concise and educational
+- Address the student's reflection directly
+- If the reflection is off-topic or incorrect, acknowledge respectfully and redirect to the key concept
+- The hint must guide thinking without giving the full answer
+- The explanation must clarify the concept and correct misunderstandings respectfully
+- Return ONLY valid JSON with this exact structure:
+{
+  "hint": "short guiding hint",
+  "explanation": "clear corrective explanation"
+}`;
   } else if (tool === 'chat') {
     if (mode === 'preclinico') {
       return isES
@@ -344,6 +367,11 @@ function buildUserPrompt(req: AIRequest): string {
 
   if (tool === 'reflect') {
     return input.trim();
+  } else if (tool === 'coach') {
+    const reflection = context?.learnerReflection?.trim();
+    return isES
+      ? `Pregunta del estudiante: "${input}"\nReflexión del estudiante: "${reflection || 'Sin reflexión escrita'}"\nGenera una pista y una explicación correctiva respetuosa.`
+      : `Student question: "${input}"\nStudent reflection: "${reflection || 'No written reflection'}"\nGenerate a hint and a respectful corrective explanation.`;
   } else if (tool === 'chat') {
     let prompt = isES
       ? `Usuario pregunta sobre: "${input}"`
@@ -635,6 +663,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         type: 'reflect',
         prompt: content.trim(),
       } as ReflectResponse);
+    }
+    if (body.tool === 'coach') {
+      const coachParsed = parseJSONResponse(content) as CoachResponse | null;
+      if (!coachParsed || typeof coachParsed.hint !== 'string' || typeof coachParsed.explanation !== 'string') {
+        return res.status(200).json({
+          type: 'error',
+          error: 'Invalid coach structure',
+          raw: content.substring(0, 1000)
+        } as ErrorResponse);
+      }
+      return res.status(200).json({
+        type: 'coach',
+        hint: coachParsed.hint.trim(),
+        explanation: coachParsed.explanation.trim(),
+      } as CoachResponse);
     }
 
     // For all other tools, parse as JSON
