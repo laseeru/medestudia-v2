@@ -25,6 +25,8 @@ import TopicExplainer from '@/components/TopicExplainer';
 import ScoreStats from '@/components/ScoreStats';
 import ChatInterface from '@/components/ChatInterface';
 
+const PENDING_CHAT_QUESTION_KEY = 'medestudia_pending_preclinical_chat_question';
+
 const preclinicalSubjects = [
   { key: 'anatomy', icon: Bone },
   { key: 'histology', icon: Microscope },
@@ -61,11 +63,18 @@ const Preclinical: React.FC = () => {
     e.preventDefault();
     const trimmedQuestion = assistantQuestion.trim();
     setAssistantSubmitting(true);
-    setActiveLearningTool('assistant');
+
     if (trimmedQuestion) {
+      // Persist pending question to survive view transitions and state timing.
+      try {
+        sessionStorage.setItem(PENDING_CHAT_QUESTION_KEY, trimmedQuestion);
+      } catch {
+        // Ignore sessionStorage errors
+      }
       setInitialAssistantQuestion(trimmedQuestion);
       setAssistantQuestion('');
     }
+    setActiveLearningTool('assistant');
     setTimeout(() => setAssistantSubmitting(false), 200);
   };
 
@@ -192,8 +201,21 @@ const Preclinical: React.FC = () => {
             <div className="rounded-xl border border-border bg-card p-0 md:p-0 overflow-hidden">
                 <ChatInterface
                   mode="preclinical"
-                  initialQuestion={initialAssistantQuestion}
-                  onInitialQuestionUsed={() => setInitialAssistantQuestion('')}
+                  initialQuestion={initialAssistantQuestion || (() => {
+                    try {
+                      return sessionStorage.getItem(PENDING_CHAT_QUESTION_KEY) || '';
+                    } catch {
+                      return '';
+                    }
+                  })()}
+                  onInitialQuestionUsed={() => {
+                    setInitialAssistantQuestion('');
+                    try {
+                      sessionStorage.removeItem(PENDING_CHAT_QUESTION_KEY);
+                    } catch {
+                      // Ignore sessionStorage errors
+                    }
+                  }}
                   fullscreen
                 />
             </div>
