@@ -21,6 +21,7 @@ export interface AIRequest {
   mode: Mode;
   language: Language;
   input: string;
+  session_id?: string;
   context?: AIContext;
 }
 

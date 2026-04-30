@@ -39,8 +39,12 @@ interface ChatInterfaceProps {
   fullscreen?: boolean;
 }
 
-const getChatStorageKey = (mode: string, subject?: string) => {
-  return `medestudia_chat_${mode}_${subject || 'default'}`;
+const getSessionMetaKey = (mode: string, subject?: string) => {
+  return `medestudia_chat_session_meta_${mode}_${subject || 'default'}`;
+};
+
+const getChatStorageKey = (mode: string, subject: string | undefined, sessionId: string) => {
+  return `medestudia_chat_${mode}_${subject || 'default'}_${sessionId}`;
 };
 
 const MAX_CHAT_HISTORY = 20;
@@ -68,8 +72,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastAutoSentQuestionRef = useRef<string | null>(null);
+
+  const generateSessionId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -173,7 +185,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
   }, [messages]);
 
   useEffect(() => {
-    const storageKey = getChatStorageKey(mode, subject);
+    const metaKey = getSessionMetaKey(mode, subject);
+    let nextSessionId = generateSessionId();
+    try {
+      const storedSessionId = localStorage.getItem(metaKey);
+      if (storedSessionId) {
+        nextSessionId = storedSessionId;
+      } else {
+        localStorage.setItem(metaKey, nextSessionId);
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    setSessionId(nextSessionId);
+  }, [mode, subject]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const storageKey = getChatStorageKey(mode, subject, sessionId);
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
@@ -204,19 +233,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     };
 
     setMessages([{ id: Date.now().toString(), role: 'assistant', content: getWelcomeMessage() }]);
-  }, [mode, subject, language]);
+  }, [mode, subject, language, sessionId]);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      const storageKey = getChatStorageKey(mode, subject);
-      const toSave = messages.slice(-MAX_CHAT_HISTORY);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(toSave));
-      } catch {
-        // Ignore localStorage errors
-      }
+    if (!sessionId) return;
+    const storageKey = getChatStorageKey(mode, subject, sessionId);
+    const toSave = messages.slice(-MAX_CHAT_HISTORY);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(toSave));
+    } catch {
+      // Ignore localStorage errors
     }
-  }, [messages, mode, subject]);
+  }, [messages, mode, subject, sessionId]);
 
   useEffect(() => {
     if (!initialQuestion?.trim() || isTyping) return;
@@ -250,6 +278,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
         mode: apiMode,
         language: detectedLanguage,
         input: userQuery,
+        session_id: sessionId,
         context: subject ? { subject } : undefined,
       };
 
@@ -363,6 +392,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     return t('typeMessage');
   };
 
+  const handleNewConversation = () => {
+    if (messages.length > 2) {
+      const confirmMessage = language === 'es'
+        ? '¿Iniciar una nueva conversación?'
+        : 'Start a new conversation?';
+      if (!window.confirm(confirmMessage)) return;
+    }
+
+    const newSessionId = generateSessionId();
+    try {
+      localStorage.setItem(getSessionMetaKey(mode, subject), newSessionId);
+    } catch {
+      // Ignore localStorage errors
+    }
+
+    setInput('');
+    setError(null);
+    setRetryingMessageId(null);
+    setMessages([]);
+    lastAutoSentQuestionRef.current = null;
+    setSessionId(newSessionId);
+  };
+
   const groupedMessages = groupMessagesByRole(messages);
 
   return (
@@ -379,11 +431,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           <span className="text-xs md:text-sm">{language === 'es' ? 'Asistente activo' : 'Assistant active'}</span>
         </div>
-        {mode === 'preclinical' && (
-          <span className="hidden sm:inline text-xs text-muted-foreground">
-            {language === 'es' ? 'Modo: aprendizaje guiado' : 'Mode: guided learning'}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {mode === 'preclinical' && (
+            <span className="hidden sm:inline text-xs text-muted-foreground">
+              {language === 'es' ? 'Modo: aprendizaje guiado' : 'Mode: guided learning'}
+            </span>
+          )}
+          <Button size="sm" variant="outline" className="h-8 px-2 md:px-3 text-xs" onClick={handleNewConversation}>
+            {language === 'es' ? '+ Nueva conversación' : '+ New conversation'}
+          </Button>
+        </div>
       </div>
 
       {mode !== 'clinical-guidelines' && (

@@ -32,6 +32,7 @@ interface AIRequest {
   mode: 'preclinico' | 'clinico_estudio' | 'clinico_guias';
   language: 'es' | 'en';
   input: string;
+  session_id?: string;
   context?: {
     subject?: string;
     rotation?: string;
@@ -402,6 +403,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error: 'Missing required fields: tool, mode, language, input' 
     });
   }
+  if (body.tool === 'chat' && !body.session_id) {
+    return res.status(400).json({
+      type: 'error',
+      error: 'Missing required field: session_id for chat requests',
+    });
+  }
 
   // Clamp input length
   if (body.input.length > MAX_INPUT_LENGTH) {
@@ -449,6 +456,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ],
       temperature,
       max_tokens: maxTokens,
+      ...(body.session_id ? { user: body.session_id } : {}),
     };
 
     if (provider === 'deepseek') {
