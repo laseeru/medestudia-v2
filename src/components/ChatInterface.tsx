@@ -416,6 +416,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
   };
 
   const groupedMessages = groupMessagesByRole(messages);
+  const hasUserMessage = messages.some((m) => m.role === 'user');
+  const isLearningFlowMessage = (message: Message) => {
+    if (message.learningFlow) return true;
+    const messageIndex = messages.findIndex((m) => m.id === message.id);
+    if (messageIndex <= 0) return false;
+    return messages.slice(0, messageIndex).some((m) => m.role === 'user');
+  };
 
   return (
     <div
@@ -482,7 +489,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                     group.role === 'user' && 'bg-academic text-white',
                   )}
                 >
-                  {group.role === 'assistant' && !message.error && mode === 'preclinical' ? (
+                  {group.role === 'assistant' && !message.error && mode === 'preclinical' && hasUserMessage && isLearningFlowMessage(message) ? (
                     <div className="space-y-2">
                       {(() => {
                         const flow = message.learningFlow || buildLearningFlow(message.content, language);
