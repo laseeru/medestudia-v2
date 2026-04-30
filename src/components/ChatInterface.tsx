@@ -76,6 +76,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
   const [sessionId, setSessionId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastAutoSentQuestionRef = useRef<string | null>(null);
+  const lastLoadedSessionKeyRef = useRef<string | null>(null);
 
   const generateSessionId = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -206,6 +207,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
 
   useEffect(() => {
     if (!sessionId) return;
+    const sessionLoadKey = `${mode}_${subject || 'default'}_${sessionId}_${language}`;
+    if (lastLoadedSessionKeyRef.current === sessionLoadKey) return;
+
+    lastLoadedSessionKeyRef.current = sessionLoadKey;
     const storageKey = getChatStorageKey(mode, subject, sessionId);
     try {
       const stored = localStorage.getItem(storageKey);
@@ -218,6 +223,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
       }
     } catch {
       // Ignore parse errors
+    }
+
+    // If a pending initial question exists, avoid injecting welcome text
+    // so auto-send can start a clean question-first session.
+    if (initialQuestion?.trim()) {
+      setMessages([]);
+      return;
     }
 
     const getWelcomeMessage = (): string => {
@@ -237,7 +249,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     };
 
     setMessages([{ id: Date.now().toString(), role: 'assistant', content: getWelcomeMessage() }]);
-  }, [mode, subject, language, sessionId]);
+  }, [mode, subject, language, sessionId, initialQuestion]);
 
   useEffect(() => {
     if (!sessionId) return;
