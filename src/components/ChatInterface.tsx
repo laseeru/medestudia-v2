@@ -261,6 +261,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     const userQuery = (retryInput || input).trim();
     if (!userQuery) return;
     const detectedLanguage = detectInputLanguage(userQuery);
+    let activeSessionId = sessionId;
+
+    if (!activeSessionId) {
+      activeSessionId = generateSessionId();
+      try {
+        localStorage.setItem(getSessionMetaKey(mode, subject), activeSessionId);
+      } catch {
+        // Ignore localStorage errors
+      }
+      setSessionId(activeSessionId);
+    }
 
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: userQuery };
     setMessages((prev) => [...prev, userMessage]);
@@ -278,7 +289,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
         mode: apiMode,
         language: detectedLanguage,
         input: userQuery,
-        session_id: sessionId,
+        session_id: activeSessionId,
         context: subject ? { subject } : undefined,
       };
 
