@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, AlertCircle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
-import { callAI, callAIStream, type GuidelinesResponse, isErrorResponse } from '@/lib/aiClient';
+import { callAI, callAIStream, type GuidelinesResponse, type ReflectResponse, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -156,15 +156,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     };
   };
 
-  const buildLearningFlow = (content: string, uiLanguage: 'es' | 'en'): LearningFlow => {
+  const buildLearningFlow = (content: string, uiLanguage: 'es' | 'en', reflectionPromptOverride?: string): LearningFlow => {
     const sections = formatAssistantContent(content, uiLanguage);
     return {
       uiLanguage,
       currentStage: 'reflection',
       reflectionPrompt:
-        uiLanguage === 'es'
+        reflectionPromptOverride?.trim() ||
+        (uiLanguage === 'es'
           ? 'Antes de ver la respuesta, ¿cómo lo explicarías tú?'
-          : 'Before seeing the answer, how would you explain it?',
+          : 'Before seeing the answer, how would you explain it?'),
       hint: sections.hint,
       explanation: sections.explanation,
     };
@@ -294,6 +295,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
       };
 
       if (tool === 'chat') {
+        const reflectionPromise = apiMode === 'preclinico'
+          ? callAI({
+              tool: 'reflect',
+              mode: apiMode,
+              language: detectedLanguage,
+              input: userQuery,
+              session_id: activeSessionId,
+              context: subject ? { subject } : undefined,
+            }).catch(() => null)
+          : null;
+
         const assistantMessageId = (Date.now() + 1).toString();
         setMessages((prev) => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
 
@@ -314,10 +326,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
         }
 
         if (apiMode === 'preclinico') {
+          const reflectionResponse = reflectionPromise ? await reflectionPromise : null;
+          const reflectionPrompt =
+            reflectionResponse && !isErrorResponse(reflectionResponse) && reflectionResponse.type === 'reflect'
+              ? (reflectionResponse as ReflectResponse).prompt
+              : undefined;
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMessageId
-                ? { ...msg, learningFlow: buildLearningFlow(msg.content, detectedLanguage) }
+                ? { ...msg, learningFlow: buildLearningFlow(msg.content, detectedLanguage, reflectionPrompt) }
                 : msg,
             ),
           );

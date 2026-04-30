@@ -2,7 +2,7 @@
  * AI Client - Frontend helper for calling the DeepSeek backend API
  */
 
-export type Tool = 'chat' | 'mcq' | 'quiz' | 'explain' | 'guides';
+export type Tool = 'chat' | 'mcq' | 'quiz' | 'explain' | 'guides' | 'reflect';
 export type Mode = 'preclinico' | 'clinico_estudio' | 'clinico_guias';
 export type Language = 'es' | 'en';
 export type Difficulty = 'easy' | 'medium' | 'hard';
@@ -70,13 +70,18 @@ export interface GuidelinesResponse {
   sourceNote: string;
 }
 
+export interface ReflectResponse {
+  type: 'reflect';
+  prompt: string;
+}
+
 export interface ErrorResponse {
   type: 'error';
   error: string;
   raw?: string;
 }
 
-export type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse | ErrorResponse;
+export type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse | ReflectResponse | ErrorResponse;
 
 /**
  * Call the AI backend API

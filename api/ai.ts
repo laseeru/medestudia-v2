@@ -28,7 +28,7 @@ declare const process: {
 
 // Request/Response types
 interface AIRequest {
-  tool: 'chat' | 'mcq' | 'quiz' | 'explain' | 'guides';
+  tool: 'chat' | 'mcq' | 'quiz' | 'explain' | 'guides' | 'reflect';
   mode: 'preclinico' | 'clinico_estudio' | 'clinico_guias';
   language: 'es' | 'en';
   input: string;
@@ -88,7 +88,12 @@ interface GuidelinesResponse {
   sourceNote: string;
 }
 
-type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse;
+interface ReflectResponse {
+  type: 'reflect';
+  prompt: string;
+}
+
+type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse | ReflectResponse;
 
 // Error response type
 interface ErrorResponse {
@@ -106,6 +111,7 @@ const TOKEN_LIMITS = {
   explain: 850,  // Structured explanation
   chat: 700,     // Conversational responses
   guides: 1100,  // Structured guidelines
+  reflect: 180,  // Short guiding reflection prompt
 };
 const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
@@ -143,7 +149,18 @@ Always respond in ${lang} and use precise medical terminology.
 NEVER use placeholders like "Option A/B" in response options.
 Your responses must be specific to the topic consulted by the user.`;
 
-  if (tool === 'chat') {
+  if (tool === 'reflect') {
+    return `You are a medical educator. Given a student's question, generate a short reflection prompt that encourages thinking before answering.
+
+Rules:
+- Do NOT answer the question
+- Ask a guiding question
+- Keep it concise (1-2 sentences)
+- Focus on key concept behind the question
+- Match the language of the user
+- Do NOT include greetings
+- Return only the reflection prompt text`;
+  } else if (tool === 'chat') {
     if (mode === 'preclinico') {
       return isES
         ? `${baseInstructions}
@@ -325,7 +342,9 @@ function buildUserPrompt(req: AIRequest): string {
   const difficulty = context?.difficulty || 'medium';
   const questionCount = Math.max(3, Math.min(context?.questionCount || 5, 15));
 
-  if (tool === 'chat') {
+  if (tool === 'reflect') {
+    return input.trim();
+  } else if (tool === 'chat') {
     let prompt = isES
       ? `Usuario pregunta sobre: "${input}"`
       : `User asks about: "${input}"`;
@@ -610,6 +629,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             : 'Educational mode — hypothetical case for learning purposes')
           : undefined
       } as ChatResponse);
+    }
+    if (body.tool === 'reflect') {
+      return res.status(200).json({
+        type: 'reflect',
+        prompt: content.trim(),
+      } as ReflectResponse);
     }
 
     // For all other tools, parse as JSON
