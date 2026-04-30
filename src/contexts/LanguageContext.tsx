@@ -122,6 +122,7 @@ const translations: Translations = {
   easy: { es: 'Fácil', en: 'Easy' },
   medium: { es: 'Medio', en: 'Medium' },
   hard: { es: 'Difícil', en: 'Hard' },
+  startPractice: { es: 'Iniciar práctica', en: 'Start practice' },
   generateQuestion: { es: 'Generar Pregunta', en: 'Generate Question' },
   generating: { es: 'Generando...', en: 'Generating...' },
   explanation: { es: 'Explicación', en: 'Explanation' },

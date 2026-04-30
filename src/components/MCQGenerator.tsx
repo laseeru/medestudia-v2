@@ -60,6 +60,8 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
   const [isLoading, setIsLoading] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasStartedSession, setHasStartedSession] = useState(false);
+  const [questionCount, setQuestionCount] = useState(0);
   const difficultyLabel = (d: Difficulty) => {
     const key = d === 'easy' ? 'basic' : d === 'medium' ? 'intermediate' : 'clinicalLevel';
     return t(key);
@@ -109,6 +111,8 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
         correctIndex: mcq.correctIndex,
         explanation: mcq.explanation,
       });
+      setHasStartedSession(true);
+      setQuestionCount((prev) => prev + 1);
       
       setIsLoading(false);
     } catch (err: any) {
@@ -189,13 +193,16 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
         
         <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
           <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-          {isLoading ? t('generating') : t('generateQuestion')}
+          {isLoading ? t('generating') : hasStartedSession ? t('nextQuestion') : t('startPractice')}
         </Button>
       </div>
 
       {/* Question Display */}
       {question && (
         <div className="space-y-4 p-4 bg-card rounded-lg border border-border animate-fade-in">
+          <p className="text-xs text-muted-foreground font-medium">
+            {t('question')} {questionCount}
+          </p>
           <p className="text-foreground font-medium">{question.question}</p>
           
           <div className="space-y-2">
