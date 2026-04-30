@@ -179,7 +179,6 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
     
     try {
       const apiMode = mode === 'clinical-study' ? 'clinico_estudio' : 'preclinico';
-      const historyKey = getQuizHistoryKey(subject, topic, difficulty, language, mode);
       const normalizedTopic = quizTopic;
       const historyKeyForTopic = getQuizHistoryKey(subject, normalizedTopic, difficulty, language, mode);
       const seenFromStorage = loadSeenFingerprints(historyKeyForTopic);
