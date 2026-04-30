@@ -28,7 +28,7 @@ declare const process: {
 
 // Request/Response types
 interface AIRequest {
-  tool: 'chat' | 'mcq' | 'quiz' | 'explain' | 'guides' | 'reflect' | 'coach';
+  tool: 'chat' | 'mcq' | 'quiz' | 'explain' | 'guides' | 'reflect' | 'coach' | 'classify';
   mode: 'preclinico' | 'clinico_estudio' | 'clinico_guias';
   language: 'es' | 'en';
   input: string;
@@ -43,6 +43,8 @@ interface AIRequest {
     learnerReflection?: string;
   };
 }
+
+type DetailLevel = 'brief' | 'standard' | 'deep';
 
 // Response types for different tools
 interface ChatResponse {
@@ -100,7 +102,12 @@ interface CoachResponse {
   explanation: string;
 }
 
-type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse | ReflectResponse | CoachResponse;
+interface ClassifyResponse {
+  type: 'classify';
+  label: 'new_question' | 'follow_up' | 'feedback' | 'non_medical';
+}
+
+type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse | ReflectResponse | CoachResponse | ClassifyResponse;
 
 // Error response type
 interface ErrorResponse {
@@ -116,10 +123,11 @@ const TOKEN_LIMITS = {
   mcq: 600,      // Short question + options + explanation
   quiz: 1200,    // 5 questions with concise explanations
   explain: 850,  // Structured explanation
-  chat: 700,     // Conversational responses
+  chat: 950,     // Conversational responses (adaptive depth)
   guides: 1100,  // Structured guidelines
   reflect: 180,  // Short guiding reflection prompt
-  coach: 380,    // Hint + corrective explanation
+  coach: 700,    // Hint + corrective explanation (adaptive depth)
+  classify: 40,  // Single-label intent classification
 };
 const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
@@ -168,6 +176,15 @@ Rules:
 - Match the language of the user
 - Do NOT include greetings
 - Return only the reflection prompt text`;
+  } else if (tool === 'classify') {
+    return `You are a classifier. Classify the user's message into ONE of the following:
+
+- new_question (a new academic or medical question)
+- follow_up (requesting more detail, clarification, or expansion)
+- feedback (acknowledgement like 'ok', 'dale', 'gracias')
+- non_medical
+
+Respond with ONE word only.`;
   } else if (tool === 'coach') {
     return `You are a medical educator. Given the student's question and reflection, produce guidance in the same language as the student.
 
@@ -365,13 +382,42 @@ function buildUserPrompt(req: AIRequest): string {
   const difficulty = context?.difficulty || 'medium';
   const questionCount = Math.max(3, Math.min(context?.questionCount || 5, 15));
 
+  const inferDetailLevel = (texts: string[]): DetailLevel => {
+    const haystack = texts.join(' ').toLowerCase();
+    const deepPatterns = [
+      /más detalle|mas detalle|explica más|explica mas|más profundo|mas profundo|a profundidad|detallado|detallada|amplia|ampliar|thorough|in depth|deeper|more detail|detailed|expand/,
+    ];
+    const briefPatterns = [
+      /resumen|breve|corto|rápido|rapido|conciso|short|brief|quick|summary/,
+    ];
+
+    if (deepPatterns.some((p) => p.test(haystack))) return 'deep';
+    if (briefPatterns.some((p) => p.test(haystack))) return 'brief';
+    return 'standard';
+  };
+
+  const detailLevel = inferDetailLevel([input, context?.learnerReflection || '']);
+  const detailInstruction = isES
+    ? detailLevel === 'deep'
+      ? 'Profundidad solicitada: alta. Ofrece una explicación más extensa y estructurada, con razonamiento paso a paso y conexiones clínicas/preclínicas relevantes.'
+      : detailLevel === 'brief'
+        ? 'Profundidad solicitada: breve. Mantén la explicación corta y directa.'
+        : 'Profundidad solicitada: estándar. Balancea claridad y profundidad.'
+    : detailLevel === 'deep'
+      ? 'Requested depth: high. Provide a more thorough, structured explanation with step-by-step reasoning and relevant clinical/preclinical links.'
+      : detailLevel === 'brief'
+        ? 'Requested depth: brief. Keep the explanation short and direct.'
+        : 'Requested depth: standard. Balance clarity and depth.';
+
   if (tool === 'reflect') {
+    return input.trim();
+  } else if (tool === 'classify') {
     return input.trim();
   } else if (tool === 'coach') {
     const reflection = context?.learnerReflection?.trim();
     return isES
-      ? `Pregunta del estudiante: "${input}"\nReflexión del estudiante: "${reflection || 'Sin reflexión escrita'}"\nGenera una pista y una explicación correctiva respetuosa.`
-      : `Student question: "${input}"\nStudent reflection: "${reflection || 'No written reflection'}"\nGenerate a hint and a respectful corrective explanation.`;
+      ? `Pregunta del estudiante: "${input}"\nReflexión del estudiante: "${reflection || 'Sin reflexión escrita'}"\n${detailInstruction}\nGenera una pista y una explicación correctiva respetuosa.`
+      : `Student question: "${input}"\nStudent reflection: "${reflection || 'No written reflection'}"\n${detailInstruction}\nGenerate a hint and a respectful corrective explanation.`;
   } else if (tool === 'chat') {
     let prompt = isES
       ? `Usuario pregunta sobre: "${input}"`
@@ -388,6 +434,7 @@ function buildUserPrompt(req: AIRequest): string {
         ? `\n\nProporciona una respuesta estructurada basada en guías clínicas representativas, organizada en pasos claros con advertencias relevantes. Al final, incluye la nota sobre contenido representativo y futura integración de guías oficiales cubanas.`
         : `\n\nProvide a structured response based on representative clinical guidelines, organized in clear steps with relevant warnings. At the end, include the note about representative content and future integration of official Cuban guidelines.`;
     }
+    prompt += isES ? `\n\n${detailInstruction}` : `\n\n${detailInstruction}`;
     
     return prompt;
   } else if (tool === 'mcq') {
@@ -663,6 +710,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         type: 'reflect',
         prompt: content.trim(),
       } as ReflectResponse);
+    }
+    if (body.tool === 'classify') {
+      const raw = content.trim().toLowerCase();
+      const match = raw.match(/new_question|follow_up|feedback|non_medical/);
+      const label = (match?.[0] || 'new_question') as ClassifyResponse['label'];
+      return res.status(200).json({
+        type: 'classify',
+        label,
+      } as ClassifyResponse);
     }
     if (body.tool === 'coach') {
       const coachParsed = parseJSONResponse(content) as CoachResponse | null;

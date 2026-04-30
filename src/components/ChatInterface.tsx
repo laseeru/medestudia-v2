@@ -80,6 +80,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
   const lastAutoSentQuestionRef = useRef<string | null>(null);
   const lastLoadedSessionKeyRef = useRef<string | null>(null);
   const conversationStartedRef = useRef<boolean>(false);
+  const lastTopicRef = useRef<string>('');
+  const lastExplanationRef = useRef<string>('');
 
   const generateSessionId = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -323,6 +325,69 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
       };
 
       if (tool === 'chat') {
+        let classificationLabel: 'new_question' | 'follow_up' | 'feedback' | 'non_medical' = 'new_question';
+        if (apiMode === 'preclinico') {
+          const classificationResponse = await callAI({
+            tool: 'classify',
+            mode: apiMode,
+            language: detectedLanguage,
+            input: userQuery,
+            session_id: activeSessionId,
+            context: {
+              subject,
+              topic: lastTopicRef.current || undefined,
+              learnerReflection: lastExplanationRef.current || undefined,
+            },
+          });
+          if (!isErrorResponse(classificationResponse) && classificationResponse.type === 'classify') {
+            classificationLabel = classificationResponse.label;
+          }
+        }
+
+        if (apiMode === 'preclinico' && classificationLabel === 'feedback') {
+          const feedbackText = detectedLanguage === 'es'
+            ? 'Perfecto 👍 Si quieres profundizar en algo, dime.'
+            : 'Perfect 👍 If you want to go deeper into anything, let me know.';
+          setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: feedbackText }]);
+          updateStatus(true);
+          setIsTyping(false);
+          return;
+        }
+
+        if (apiMode === 'preclinico' && classificationLabel === 'non_medical') {
+          const nonMedicalText = detectedLanguage === 'es'
+            ? 'Este asistente está diseñado para aprendizaje médico. Reformula tu pregunta en un contexto clínico o académico.'
+            : 'This assistant is designed for medical learning. Please reframe your question in a clinical or academic context.';
+          setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: nonMedicalText }]);
+          updateStatus(true);
+          setIsTyping(false);
+          return;
+        }
+
+        if (apiMode === 'preclinico' && classificationLabel === 'follow_up') {
+          const followupContextTopic = lastTopicRef.current || userQuery;
+          const coachResponse = await callAI({
+            tool: 'coach',
+            mode: apiMode,
+            language: detectedLanguage,
+            input: followupContextTopic,
+            session_id: activeSessionId,
+            context: {
+              subject,
+              topic: followupContextTopic,
+              learnerReflection: `${userQuery}\n${lastExplanationRef.current || ''}`,
+            },
+          });
+          if (!isErrorResponse(coachResponse) && coachResponse.type === 'coach') {
+            const followupContent = `${detectedLanguage === 'es' ? '📌 Pista' : '📌 Hint'}\n${coachResponse.hint}\n\n${detectedLanguage === 'es' ? '📖 Explicación' : '📖 Explanation'}\n${coachResponse.explanation}`;
+            setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: followupContent }]);
+            lastExplanationRef.current = coachResponse.explanation;
+            updateStatus(true);
+            setIsTyping(false);
+            return;
+          }
+        }
+
         const reflectionPromise = apiMode === 'preclinico'
           ? callAI({
               tool: 'reflect',
@@ -378,6 +443,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                 : msg,
             ),
           );
+          lastTopicRef.current = userQuery;
         }
 
         updateStatus(true);
@@ -480,6 +546,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
           explanation: coachResponse.explanation,
           isGeneratingGuidance: false,
         }));
+        lastExplanationRef.current = coachResponse.explanation;
       } else {
         updateLearningFlow(messageId, (flow) => ({ ...flow, isGeneratingGuidance: false }));
       }
@@ -674,7 +741,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                               <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
                                 <p className="text-[11px] font-medium text-muted-foreground mb-1">📌 {isSpanish ? 'Pista' : 'Hint'}</p>
                                 <p className="text-sm text-muted-foreground animate-pulse">
-                                  {isSpanish ? 'Generando pista personalizada...' : 'Generating personalized hint...'}
+                                  {isSpanish ? 'Pensando en una pista para ti...' : 'Thinking of a hint for you...'}
                                 </p>
                               </div>
                             );
