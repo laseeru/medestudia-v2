@@ -113,7 +113,7 @@ const translations: Translations = {
   selectStudyTool: { es: 'Selecciona una forma de aprendizaje', en: 'Select a learning section' },
   basic: { es: 'Básico', en: 'Basic' },
   intermediate: { es: 'Intermedio', en: 'Intermediate' },
-  clinicalLevel: { es: 'Clínico', en: 'Clinical' },
+  clinicalLevel: { es: 'Difícil', en: 'Hard' },
 
   // MCQ Generator
   topicOptional: { es: 'Tema (opcional)', en: 'Topic (optional)' },

@@ -153,7 +153,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
   };
 
   const difficultyLabel = (d: Difficulty) => {
-    const key = d === 'easy' ? 'basic' : d === 'medium' ? 'intermediate' : 'clinicalLevel';
+    const key = d === 'easy' ? 'basic' : d === 'medium' ? 'intermediate' : 'hard';
     return t(key);
   };
 
@@ -166,15 +166,24 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
   };
 
   const handleStart = async () => {
+    const quizTopic = topic.trim();
+    if (!quizTopic) {
+      setError(language === 'es'
+        ? 'Ingresa un tema para iniciar la evaluación rápida.'
+        : 'Enter a topic to start the rapid assessment.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
     try {
       const apiMode = mode === 'clinical-study' ? 'clinico_estudio' : 'preclinico';
       const historyKey = getQuizHistoryKey(subject, topic, difficulty, language, mode);
-      const seenFromStorage = loadSeenFingerprints(historyKey);
+      const normalizedTopic = quizTopic;
+      const historyKeyForTopic = getQuizHistoryKey(subject, normalizedTopic, difficulty, language, mode);
+      const seenFromStorage = loadSeenFingerprints(historyKeyForTopic);
       const seenFingerprints = new Set(seenFromStorage);
-      const quizTopic = topic || subject;
 
       const fetchQuizBatch = async (avoidQuestions: string[] = []): Promise<QuizQuestion[]> => {
         const avoidText =
@@ -192,7 +201,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
           context: {
             subject,
             difficulty,
-            topic: topic || undefined,
+            topic: quizTopic,
             questionCount,
           },
         });
@@ -231,7 +240,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
 
       const quizQuestions = uniqueQuestions.slice(0, questionCount);
       const newFingerprints = quizQuestions.map((q) => buildQuestionFingerprint(q));
-      saveSeenFingerprints(historyKey, [...seenFromStorage, ...newFingerprints]);
+      saveSeenFingerprints(historyKeyForTopic, [...seenFromStorage, ...newFingerprints]);
 
       updateStatus(true);
 

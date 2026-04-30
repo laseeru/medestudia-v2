@@ -381,6 +381,17 @@ function buildUserPrompt(req: AIRequest): string {
   const subject = context?.subject || context?.rotation || context?.system;
   const difficulty = context?.difficulty || 'medium';
   const questionCount = Math.max(3, Math.min(context?.questionCount || 5, 15));
+  const difficultyInstruction = isES
+    ? difficulty === 'easy'
+      ? 'Nivel de dificultad: básico. Evalúa definiciones, conceptos fundamentales y reconocimiento simple.'
+      : difficulty === 'medium'
+        ? 'Nivel de dificultad: intermedio. Evalúa aplicación de conceptos, comparación y razonamiento clínico/preclínico moderado.'
+        : 'Nivel de dificultad: difícil. Evalúa integración de múltiples conceptos, discriminación fina entre opciones plausibles y razonamiento avanzado.'
+    : difficulty === 'easy'
+      ? 'Difficulty level: basic. Test definitions, core concepts, and simple recognition.'
+      : difficulty === 'medium'
+        ? 'Difficulty level: intermediate. Test concept application, comparison, and moderate clinical/preclinical reasoning.'
+        : 'Difficulty level: hard. Test integration of multiple concepts, fine discrimination among plausible options, and advanced reasoning.';
 
   const inferDetailLevel = (texts: string[]): DetailLevel => {
     const haystack = texts.join(' ').toLowerCase();
@@ -440,15 +451,19 @@ function buildUserPrompt(req: AIRequest): string {
   } else if (tool === 'mcq') {
     return isES
       ? `Genera una pregunta de opción múltiple de dificultad ${difficulty} sobre "${topic}". ${subject ? `Contexto: ${subject}.` : ''}
+${difficultyInstruction}
 Las opciones deben ser respuestas médicas reales y específicas, NO placeholders. La pregunta debe mencionar explícitamente "${topic}".`
       : `Generate a ${difficulty} difficulty multiple choice question about "${topic}". ${subject ? `Context: ${subject}.` : ''}
+${difficultyInstruction}
 Options must be real and specific medical answers, NOT placeholders. The question must explicitly mention "${topic}".`;
   } else if (tool === 'quiz') {
     return isES
       ? `Genera exactamente ${questionCount} preguntas de opción múltiple médicas sobre "${topic}". ${subject ? `Contexto: ${subject}.` : ''}
+${difficultyInstruction}
 Las preguntas deben cubrir diferentes aspectos del tema y mencionar explícitamente "${topic}" o conceptos relacionados. Las opciones deben ser respuestas médicas reales.
 Evita enunciados repetidos o casi repetidos en el mismo resultado.`
       : `Generate exactly ${questionCount} medical multiple choice questions about "${topic}". ${subject ? `Context: ${subject}.` : ''}
+${difficultyInstruction}
 Questions should cover different aspects of the topic and explicitly mention "${topic}" or related concepts. Options must be real medical answers.
 Avoid repeated or near-duplicate stems within the same result.`;
   } else if (tool === 'explain') {

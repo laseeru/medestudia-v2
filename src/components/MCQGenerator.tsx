@@ -63,7 +63,7 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
   const [hasStartedSession, setHasStartedSession] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
   const difficultyLabel = (d: Difficulty) => {
-    const key = d === 'easy' ? 'basic' : d === 'medium' ? 'intermediate' : 'clinicalLevel';
+    const key = d === 'easy' ? 'basic' : d === 'medium' ? 'intermediate' : 'hard';
     return t(key);
   };
 
@@ -77,6 +77,14 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
   };
 
   const handleGenerate = async () => {
+    const quizTopic = topic.trim();
+    if (!quizTopic) {
+      setError(language === 'es'
+        ? 'Ingresa un tema para practicar antes de generar la pregunta.'
+        : 'Enter a topic to practice before generating a question.');
+      return;
+    }
+
     setIsLoading(true);
     setSelectedAnswer(null);
     setShowExplanation(false);
@@ -88,12 +96,12 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
         tool: 'mcq',
         mode,
         language,
-        input: topic || subject,
+        input: quizTopic,
         context: {
           subject,
           system: systemKey,
           difficulty,
-          topic: topic || undefined,
+          topic: quizTopic,
         },
       });
 
