@@ -11,18 +11,8 @@ interface AIStatusContextType {
 const AIStatusContext = createContext<AIStatusContextType | undefined>(undefined);
 
 export const AIStatusProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Load initial status from localStorage if available
-  const [status, setStatus] = useState<AIStatus>(() => {
-    try {
-      const stored = localStorage.getItem('medestudia_ai_status');
-      if (stored === 'online' || stored === 'limited' || stored === 'offline') {
-        return stored;
-      }
-    } catch {
-      // Ignore localStorage errors
-    }
-    return 'online'; // Default to online
-  });
+  // Start fresh each load to avoid stale offline badges from previous failures.
+  const [status, setStatus] = useState<AIStatus>('online');
 
   const updateStatus = useCallback((success: boolean) => {
     setStatus((prev) => {
@@ -40,24 +30,12 @@ export const AIStatusProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
 
-      // Persist to localStorage
-      try {
-        localStorage.setItem('medestudia_ai_status', newStatus);
-      } catch {
-        // Ignore localStorage errors
-      }
-
       return newStatus;
     });
   }, []);
 
   const resetStatus = useCallback(() => {
     setStatus('online');
-    try {
-      localStorage.setItem('medestudia_ai_status', 'online');
-    } catch {
-      // Ignore localStorage errors
-    }
   }, []);
 
   return (
