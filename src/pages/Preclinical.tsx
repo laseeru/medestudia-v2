@@ -202,11 +202,13 @@ const Preclinical: React.FC = () => {
                 <ChatInterface
                   mode="preclinical"
                   initialQuestion={initialAssistantQuestion || (() => {
+                    let sessionQuestion = '';
                     try {
-                      return sessionStorage.getItem(PENDING_CHAT_QUESTION_KEY) || '';
+                      sessionQuestion = sessionStorage.getItem(PENDING_CHAT_QUESTION_KEY) || '';
                     } catch {
-                      return '';
+                      sessionQuestion = '';
                     }
+                    return sessionQuestion;
                   })()}
                   onInitialQuestionUsed={() => {
                     setInitialAssistantQuestion('');
