@@ -338,7 +338,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
               topic: lastTopicRef.current || undefined,
               learnerReflection: lastExplanationRef.current || undefined,
             },
-          });
+          }).catch(() => null);
           if (!isErrorResponse(classificationResponse) && classificationResponse.type === 'classify') {
             classificationLabel = classificationResponse.label;
           }
@@ -377,7 +377,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
               topic: followupContextTopic,
               learnerReflection: `${userQuery}\n${lastExplanationRef.current || ''}`,
             },
-          });
+          }).catch(() => null);
           if (!isErrorResponse(coachResponse) && coachResponse.type === 'coach') {
             const followupContent = `${detectedLanguage === 'es' ? '📌 Pista' : '📌 Hint'}\n${coachResponse.hint}\n\n${detectedLanguage === 'es' ? '📖 Explicación' : '📖 Explanation'}\n${coachResponse.explanation}`;
             setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: followupContent }]);
