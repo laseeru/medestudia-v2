@@ -25,10 +25,11 @@ type LearningStage = 'reflection' | 'hint' | 'explanation';
 interface LearningFlow {
   uiLanguage: 'es' | 'en';
   currentStage: LearningStage;
-  reflectionPrompt: string;
+  reflectionPrompt: string | null;
   hint: string;
   explanation: string;
   reflectionInput?: string;
+  isGeneratingReflection?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -156,18 +157,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
     };
   };
 
-  const buildLearningFlow = (content: string, uiLanguage: 'es' | 'en', reflectionPromptOverride?: string): LearningFlow => {
+  const buildLearningFlow = (
+    content: string,
+    uiLanguage: 'es' | 'en',
+    reflectionPromptOverride?: string | null,
+    isGeneratingReflection = false
+  ): LearningFlow => {
     const sections = formatAssistantContent(content, uiLanguage);
     return {
       uiLanguage,
       currentStage: 'reflection',
-      reflectionPrompt:
-        reflectionPromptOverride?.trim() ||
-        (uiLanguage === 'es'
-          ? 'Antes de ver la respuesta, ¿cómo lo explicarías tú?'
-          : 'Before seeing the answer, how would you explain it?'),
+      reflectionPrompt: reflectionPromptOverride?.trim() || null,
       hint: sections.hint,
       explanation: sections.explanation,
+      isGeneratingReflection,
     };
   };
 
@@ -307,7 +310,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
           : null;
 
         const assistantMessageId = (Date.now() + 1).toString();
-        setMessages((prev) => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: '',
+            ...(apiMode === 'preclinico'
+              ? {
+                  learningFlow: buildLearningFlow('', detectedLanguage, null, true),
+                }
+              : {}),
+          },
+        ]);
 
         await callAIStream(request, (chunk: string) => {
           setMessages((prev) =>
@@ -330,11 +345,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
           const reflectionPrompt =
             reflectionResponse && !isErrorResponse(reflectionResponse) && reflectionResponse.type === 'reflect'
               ? (reflectionResponse as ReflectResponse).prompt
-              : undefined;
+              : null;
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMessageId
-                ? { ...msg, learningFlow: buildLearningFlow(msg.content, detectedLanguage, reflectionPrompt) }
+                ? { ...msg, learningFlow: buildLearningFlow(msg.content, detectedLanguage, reflectionPrompt, false) }
                 : msg,
             ),
           );
@@ -520,10 +535,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                   {group.role === 'assistant' && !message.error && mode === 'preclinical' && hasUserMessage && isLearningFlowMessage(message) ? (
                     <div className="space-y-2">
                       {(() => {
-                        const flow = message.learningFlow || buildLearningFlow(message.content, language);
+                        const flow = message.learningFlow;
+                        if (!flow) {
+                          return <div className="whitespace-pre-wrap">{message.content}</div>;
+                        }
                         const isSpanish = flow.uiLanguage === 'es';
 
                         if (flow.currentStage === 'reflection') {
+                          if (flow.isGeneratingReflection) {
+                            return (
+                              <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
+                                <p className="text-[11px] font-medium text-muted-foreground mb-1">🧠 {isSpanish ? 'Reflexiona primero' : 'Think first'}</p>
+                                <p className="text-sm text-muted-foreground animate-pulse">
+                                  {isSpanish ? '🧠 Pensando...' : '🧠 Thinking...'}
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          if (!flow.reflectionPrompt?.trim()) {
+                            return (
+                              <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
+                                <p className="text-[11px] font-medium text-muted-foreground mb-1">🧠 {isSpanish ? 'Reflexiona primero' : 'Think first'}</p>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  {isSpanish
+                                    ? 'No se pudo generar una reflexión para esta pregunta.'
+                                    : 'Could not generate a reflection for this question.'}
+                                </p>
+                                <Button
+                                  size="sm"
+                                  className="bg-academic hover:bg-academic/90 text-white"
+                                  onClick={() => handleContinueFromReflection(message.id)}
+                                >
+                                  {isSpanish ? 'Continuar' : 'Continue'}
+                                </Button>
+                              </div>
+                            );
+                          }
+
                           return (
                             <div className="rounded-lg border border-border/60 bg-background/50 p-3 animate-fade-in transition-all duration-300">
                               <p className="text-[11px] font-medium text-muted-foreground mb-1">🧠 {isSpanish ? 'Reflexiona primero' : 'Think first'}</p>
