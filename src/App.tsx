@@ -10,6 +10,7 @@ import Preclinical from "./pages/Preclinical";
 import Clinical from "./pages/Clinical";
 import ClinicalStudy from "./pages/ClinicalStudy";
 import ClinicalGuidelines from "./pages/ClinicalGuidelines";
+import ConvencionCientifica2026 from "./pages/ConvencionCientifica2026";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/clinico" element={<Clinical />} />
               <Route path="/clinico/estudio" element={<ClinicalStudy />} />
               <Route path="/clinico/guias" element={<ClinicalGuidelines />} />
+              <Route path="/convencion-cientifica-2026" element={<ConvencionCientifica2026 />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
