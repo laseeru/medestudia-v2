@@ -56,7 +56,7 @@ const Index: React.FC = () => {
             <Button
               type="button"
               className="w-full shrink-0 sm:w-auto"
-              onClick={() => navigate('/convencion-cientifica-2026')}
+              onClick={() => navigate('/convencion')}
             >
               {t('conventionHomeButton')}
             </Button>
