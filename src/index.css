@@ -6,10 +6,10 @@
 
 @layer base {
   :root {
-    /* Medical Red - from logo cross */
-    --medical-red: 0 72% 50%;
-    --medical-red-light: 0 72% 60%;
-    --medical-red-dark: 0 72% 40%;
+    /* Clinical green (primary accent — calm, medical) */
+    --medical-red: 158 58% 42%;
+    --medical-red-light: 156 50% 52%;
+    --medical-red-dark: 160 62% 30%;
     
     /* Academic Blue - from logo book */
     --academic-blue: 210 100% 50%;
@@ -26,7 +26,7 @@
     --popover: 220 25% 11%;
     --popover-foreground: 210 20% 95%;
 
-    --primary: 0 72% 55%;
+    --primary: 158 55% 46%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 100% 50%;
@@ -35,7 +35,7 @@
     --muted: 220 20% 16%;
     --muted-foreground: 210 15% 60%;
 
-    --accent: 190 85% 50%;
+    --accent: 172 45% 42%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 50%;
@@ -49,12 +49,12 @@
 
     --border: 220 20% 18%;
     --input: 220 20% 18%;
-    --ring: 210 100% 50%;
+    --ring: 158 55% 50%;
 
     --radius: 0.75rem;
 
     /* Custom gradients */
-    --gradient-medical: linear-gradient(135deg, hsl(var(--medical-red)) 0%, hsl(var(--medical-red-dark)) 100%);
+    --gradient-medical: linear-gradient(135deg, hsl(var(--medical-red-light)) 0%, hsl(var(--medical-red-dark)) 100%);
     --gradient-academic: linear-gradient(135deg, hsl(var(--academic-blue-light)) 0%, hsl(var(--academic-blue)) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(220 25% 8%) 0%, hsl(220 25% 6%) 100%);
     
@@ -66,12 +66,12 @@
     /* Sidebar tokens */
     --sidebar-background: 220 25% 10%;
     --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 210 100% 50%;
+    --sidebar-primary: 158 55% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 20% 16%;
     --sidebar-accent-foreground: 210 20% 95%;
     --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 210 100% 50%;
+    --sidebar-ring: 158 55% 50%;
   }
 }
 

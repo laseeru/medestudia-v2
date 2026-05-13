@@ -58,6 +58,7 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         medical: {
+          /* HSL values from --medical-red* (clinical green palette) */
           DEFAULT: "hsl(var(--medical-red))",
           light: "hsl(var(--medical-red-light))",
           dark: "hsl(var(--medical-red-dark))",

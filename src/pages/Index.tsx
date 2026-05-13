@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Stethoscope } from 'lucide-react';
+import { BookOpen, Stethoscope, CalendarDays } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PathwayCard from '@/components/PathwayCard';
+import { Button } from '@/components/ui/button';
 import logoImage from '@/assets/logo-medestudia.png';
 
 const Index: React.FC = () => {
@@ -31,6 +32,35 @@ const Index: React.FC = () => {
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto text-balance">
             {t('heroSubtitle')}
           </p>
+        </div>
+
+        {/* Convención Científica — faculty event */}
+        <div className="max-w-2xl mx-auto mb-12 md:mb-14">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card p-4 md:p-5 shadow-sm">
+            <div className="flex flex-1 items-start gap-3 min-w-0">
+              <div className="rounded-lg bg-primary/15 p-2.5 text-primary shrink-0">
+                <CalendarDays className="h-6 w-6" aria-hidden />
+              </div>
+              <div className="min-w-0 text-left">
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                  {t('convention2026Badge')}
+                </p>
+                <h2 className="mt-1 font-serif text-lg font-semibold text-foreground md:text-xl">
+                  {t('conventionHomeTitle')}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t('conventionHomeDesc')}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              className="w-full shrink-0 sm:w-auto"
+              onClick={() => navigate('/convencion-cientifica-2026')}
+            >
+              {t('conventionHomeButton')}
+            </Button>
+          </div>
         </div>
 
         {/* Path Selection */}

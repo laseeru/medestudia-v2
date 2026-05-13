@@ -22,6 +22,13 @@ const translations: Translations = {
     en: 'AI-powered educational support and clinical guidelines platform' 
   },
   selectPath: { es: 'Selecciona tu camino', en: 'Select your path' },
+  conventionHomeTitle: { es: 'Convención Científica 2026', en: 'Scientific Convention 2026' },
+  conventionHomeDesc: {
+    es: 'Inscripción, comisiones científicas e información del evento de la facultad.',
+    en: 'Registration, scientific commissions, and faculty event information.',
+  },
+  conventionHomeButton: { es: 'Ir al evento', en: 'Go to event' },
+  convention2026Badge: { es: 'Evento', en: 'Event' },
   preclinicalDesc: { es: 'Ciencias básicas y formación médica temprana', en: 'Basic sciences and early medical training' },
   clinicalDesc: { es: 'Estudio clínico y referencia de guías', en: 'Clinical study and guideline reference' },
   
