@@ -252,8 +252,8 @@ const ConvencionCientifica2026: React.FC = () => {
                 },
                 {
                   icon: GraduationCap,
-                  label: "Organiza",
-                  value: "Facultad de Ciencias Médicas",
+                  label: "Organización",
+                  value: "Facultad de Ciencias Médicas, Julio Trigo López",
                 },
                 {
                   icon: Users,
@@ -449,7 +449,9 @@ const ConvencionCientifica2026: React.FC = () => {
                   Certificado de participación
                 </p>
                 <p className="mt-3 font-serif text-xl font-bold text-foreground">Convención Científica 2026</p>
-                <p className="mt-2 text-sm text-muted-foreground">Facultad de Ciencias Médicas</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Facultad de Ciencias Médicas, Julio Trigo López
+                </p>
                 <Separator className="my-6 opacity-40" />
                 <p className="text-xs italic text-muted-foreground">
                   Vista ilustrativa — el documento oficial será emitido por el comité organizador.
@@ -463,7 +465,7 @@ const ConvencionCientifica2026: React.FC = () => {
       <footer className="border-t border-border bg-muted/20 py-8 md:py-10">
         <div className="container text-center">
           <p className="text-sm font-medium text-muted-foreground">
-            Convención Científica 2026 • Facultad de Ciencias Médicas
+            Convención Científica 2026 • Facultad de Ciencias Médicas, Julio Trigo López
           </p>
           <p className="mt-2 text-xs text-muted-foreground/80">MedEstudia — página informativa</p>
         </div>
