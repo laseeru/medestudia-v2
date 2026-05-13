@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="MedEstudia">
+  <defs>
+    <linearGradient id="med" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="hsl(158, 55%, 48%)" />
+      <stop offset="100%" stop-color="hsl(160, 62%, 32%)" />
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#med)" />
+  <path fill="#f8fafc" d="M14 7h4v7h7v4h-7v7h-4v-7H7v-4h7V7z" />
+</svg>
