@@ -346,29 +346,17 @@ const ConvencionHub: React.FC = () => {
               Los certificados digitales de participación serán organizados alfabéticamente en Google Drive y podrán
               descargarse mediante un enlace compartido por el comité organizador.
             </p>
-            <div
-              className={cn(
-                "relative mx-auto max-w-lg rounded-lg border-2 border-primary/30 bg-gradient-to-b from-muted/40 to-card p-8 shadow-inner",
-                "before:pointer-events-none before:absolute before:inset-2 before:rounded-md before:border before:border-primary/10",
-              )}
-            >
-              <div className="relative text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/40 bg-primary/10">
-                  <Award className="h-7 w-7 text-primary" aria-hidden />
-                </div>
-                <p className="font-serif text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                  Certificado de participación
-                </p>
-                <p className="mt-3 font-serif text-xl font-bold text-foreground">Convención Científica 2026</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Facultad de Ciencias Médicas, Julio Trigo López
-                </p>
-                <Separator className="my-6 opacity-40" />
-                <p className="text-xs italic text-muted-foreground">
-                  Vista ilustrativa — el documento oficial será emitido por el comité organizador.
-                </p>
-              </div>
+            <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border/80 bg-card shadow-lg ring-1 ring-primary/10">
+              <img
+                src="/diploma-sample.jpg"
+                alt="Ejemplo ilustrativo de certificado digital de participación, Convención Científica 2026"
+                className="h-auto w-full object-contain"
+                loading="lazy"
+              />
             </div>
+            <p className="mx-auto mt-4 max-w-2xl text-center text-xs italic text-muted-foreground">
+              Vista ilustrativa — el documento oficial será emitido por el comité organizador.
+            </p>
           </motion.section>
         </div>
       </main>
