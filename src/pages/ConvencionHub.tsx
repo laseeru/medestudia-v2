@@ -1,6 +1,7 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { applySeo } from "@/lib/seo";
 import {
   BookOpen,
   Calendar,
@@ -57,6 +58,16 @@ function scrollToSection(id: string) {
 const ConvencionHub: React.FC = () => {
   const navigate = useNavigate();
   const scrollToRegistration = useCallback(() => scrollToSection("inscripcion"), []);
+
+  useEffect(() => {
+    applySeo({
+      title: "Convención Científica Estudiantil 2026",
+      description:
+        "Evento académico para estudiantes de ciencias médicas enfocado en innovación, investigación y educación médica.",
+      url: "https://medestudia-v2.vercel.app/convencion",
+      image: "https://medestudia-v2.vercel.app/og-convencion.png",
+    });
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

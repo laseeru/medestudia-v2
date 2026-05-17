@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Stethoscope, CalendarDays } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { applySeo } from '@/lib/seo';
 import PathwayCard from '@/components/PathwayCard';
 import { Button } from '@/components/ui/button';
 import logoImage from '@/assets/logo-medestudia.png';
@@ -11,6 +12,15 @@ import logoImage from '@/assets/logo-medestudia.png';
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+
+  useEffect(() => {
+    applySeo({
+      title: "MedEstudia",
+      description: "Plataforma educativa basada en inteligencia artificial para estudiantes de ciencias médicas.",
+      url: "https://medestudia-v2.vercel.app",
+      image: "https://medestudia-v2.vercel.app/og-medestudia.png",
+    });
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

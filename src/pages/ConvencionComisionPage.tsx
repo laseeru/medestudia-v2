@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ChevronLeft, BookOpen } from "lucide-react";
 import Header from "@/components/Header";
+import { applySeo } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +17,17 @@ const ConvencionComisionPage: React.FC = () => {
   const commission = getCommissionBySlug(slug);
   const [summaries, setSummaries] = useState<SummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    applySeo({
+      title: commission ? `${commission.title} — Convención Científica 2026` : "Convención Científica 2026",
+      description: commission
+        ? `${commission.description} Publique su resumen y participe en la Convención Científica Estudiantil 2026.`
+        : "Evento académico para estudiantes de ciencias médicas enfocado en innovación, investigación y educación médica.",
+      url: `https://medestudia-v2.vercel.app/convencion/comision/${slug}`,
+      image: "https://medestudia-v2.vercel.app/og-convencion.png",
+    });
+  }, [commission, slug]);
 
   const loadSummaries = useCallback(async () => {
     if (!commission || !isSupabaseConfigured()) {
