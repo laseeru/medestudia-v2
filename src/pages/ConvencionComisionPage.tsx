@@ -72,12 +72,12 @@ const ConvencionComisionPage: React.FC = () => {
               {commission.title}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-base">
-              {commission.description} Publique su resumen y comente los de sus compañeros. La participación queda
-              registrada para fines de certificación.
+              {commission.description} Participe publicando su resumen científico y comentando los trabajos de
+              otros autores. Su actividad queda registrada a efectos de certificación.
             </p>
             <Button asChild variant="link" className="mt-1 h-auto px-0 text-xs text-primary">
               <a href={commission.whatsapp} target="_blank" rel="noopener noreferrer">
-                Abrir grupo de WhatsApp de la comisión
+                Grupo oficial de WhatsApp de la comisión
               </a>
             </Button>
           </div>
@@ -96,7 +96,7 @@ const ConvencionComisionPage: React.FC = () => {
 
         <section className="mb-12 space-y-4">
           <h2 className="font-serif text-lg font-semibold text-foreground">Nuevo resumen</h2>
-          <SummaryForm commissionSlug={commission.slug} onSubmitted={loadSummaries} />
+          <SummaryForm commissionSlug={commission.slug} commissionWhatsapp={commission.whatsapp} onSubmitted={loadSummaries} />
         </section>
 
         <section className="space-y-4">

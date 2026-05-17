@@ -13,6 +13,7 @@ import {
   Award,
   ClipboardList,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ interface QuickNavItem {
 const quickNavItems: QuickNavItem[] = [
   { id: "informacion", label: "Información" },
   { id: "comisiones", label: "Comisiones" },
+  { id: "grupos-whatsapp", label: "WhatsApp" },
   { id: "participacion", label: "Participación" },
   { id: "inscripcion", label: "Inscripción" },
   { id: "certificados", label: "Certificados" },
@@ -108,11 +110,14 @@ const ConvencionHub: React.FC = () => {
           <div className="container relative max-w-4xl py-14 md:py-20 lg:py-24">
             <motion.div {...fadeIn}>
               <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-                Modalidad Virtual
+                Evento Virtual • 2026
               </span>
               <h1 className="mt-6 font-serif text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl text-balance">
                 Convención Científica 2026
               </h1>
+              <p className="mt-3 text-base font-medium text-primary md:text-lg">
+                25 al 29 de mayo de 2026
+              </p>
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg text-pretty">
                 Espacio virtual para el intercambio científico, académico e investigativo de estudiantes y
                 profesionales de las ciencias médicas.
@@ -152,7 +157,7 @@ const ConvencionHub: React.FC = () => {
                 {
                   icon: Calendar,
                   label: "Fecha",
-                  value: "2026",
+                  value: "25 al 29 de mayo de 2026",
                 },
                 {
                   icon: GraduationCap,
@@ -192,7 +197,7 @@ const ConvencionHub: React.FC = () => {
               <div>
                 <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">Comisiones científicas</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Entre a la comisión para publicar y comentar resúmenes, o abra el grupo de WhatsApp.
+                  Acceda a la comisión para publicar y comentar resúmenes, o diríjase al grupo oficial de WhatsApp.
                 </p>
               </div>
             </div>
@@ -222,6 +227,53 @@ const ConvencionHub: React.FC = () => {
                         <a href={c.whatsapp} target="_blank" rel="noopener noreferrer">
                           <MessageCircle className="mr-2 h-4 w-4" />
                           WhatsApp
+                        </a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+
+          <Separator className="opacity-50" />
+
+          {/* Grupos oficiales de WhatsApp */}
+          <motion.section id="grupos-whatsapp" {...fadeIn} className="scroll-mt-24">
+            <div className="mb-8 flex items-end gap-3">
+              <div className="rounded-lg bg-[#25D366]/10 p-2 text-[#25D366]">
+                <MessageCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">Grupos oficiales de WhatsApp</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Canales oficiales de cada comisión científica
+                </p>
+              </div>
+            </div>
+            <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              Cada participante debe unirse al grupo oficial correspondiente a su comisión científica para recibir
+              orientaciones, actualizaciones y actividades relacionadas con el evento.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {CONVENCION_COMMISSIONS.map((c, i) => (
+                <motion.div
+                  key={c.slug}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-24px" }}
+                  transition={{ delay: i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Card className="h-full border-border/80 shadow-sm transition-all hover:border-[#25D366]/30 hover:shadow-md">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="font-serif text-base leading-snug">{c.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button asChild variant="outline" className="w-full">
+                        <a href={c.whatsapp} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle className="mr-2 h-4 w-4 text-[#25D366]" />
+                          Unirse al grupo
+                          <ExternalLink className="ml-1 h-3 w-3 text-muted-foreground" />
                         </a>
                       </Button>
                     </CardContent>
@@ -314,17 +366,16 @@ const ConvencionHub: React.FC = () => {
             <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-md">
               <CardContent className="p-6 md:p-8">
                 <p className="mb-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                  Complete el formulario para formalizar su participación. Conservará la confirmación del envío.
+                  Complete el formulario para formalizar su inscripción en la Convención Científica 2026.
+                  Una vez enviado, recibirá la confirmación y las indicaciones para unirse al grupo de WhatsApp
+                  de su comisión.
                 </p>
                 <Button asChild size="lg" className="font-semibold">
                   <a href={REGISTRATION_FORM_URL} target="_blank" rel="noopener noreferrer">
-                    Abrir formulario
+                    Abrir formulario de inscripción
                     <ChevronRight className="ml-1 h-4 w-4" />
                   </a>
                 </Button>
-                <p className="mt-6 max-w-2xl border-t border-border/60 pt-6 text-sm leading-relaxed text-muted-foreground">
-                  Después de completar la inscripción, recibirá acceso al grupo de WhatsApp correspondiente.
-                </p>
               </CardContent>
             </Card>
           </motion.section>
@@ -343,8 +394,9 @@ const ConvencionHub: React.FC = () => {
               </div>
             </div>
             <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Los certificados digitales de participación serán organizados alfabéticamente en Google Drive y podrán
-              descargarse mediante un enlace compartido por el comité organizador.
+              Los certificados digitales de participación serán organizados alfabéticamente y estarán disponibles
+              para su descarga mediante un enlace compartido por el comité organizador, una vez concluida la
+              Convención.
             </p>
             <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border/80 bg-card shadow-lg ring-1 ring-primary/10">
               <img
