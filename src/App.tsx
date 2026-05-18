@@ -13,6 +13,7 @@ import ClinicalGuidelines from "./pages/ClinicalGuidelines";
 import ConvencionCientifica2026 from "./pages/ConvencionCientifica2026";
 import ConvencionHub from "./pages/ConvencionHub";
 import ConvencionComisionPage from "./pages/ConvencionComisionPage";
+import ConvencionAdmin from "./pages/ConvencionAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/clinico/guias" element={<ClinicalGuidelines />} />
               <Route path="/convencion" element={<ConvencionHub />} />
               <Route path="/convencion/comision/:slug" element={<ConvencionComisionPage />} />
+              <Route path="/convencion/admin" element={<ConvencionAdmin />} />
               <Route path="/convencion-cientifica-2026" element={<ConvencionCientifica2026 />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
