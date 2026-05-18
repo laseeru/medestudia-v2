@@ -401,14 +401,32 @@ const ConvencionHub: React.FC = () => {
               </div>
               <div>
                 <h2 className="font-serif text-2xl font-bold text-foreground md:text-3xl">Certificados digitales</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Entrega y consulta de constancias</p>
+                <p className="mt-1 text-sm text-muted-foreground">Consulta y descarga de constancias</p>
               </div>
             </div>
             <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Los certificados digitales de participación serán organizados alfabéticamente y estarán disponibles
-              para su descarga mediante un enlace compartido por el comité organizador, una vez concluida la
-              Convención.
+              Los participantes que hayan publicado al menos un resumen y comentado un mínimo de dos trabajos
+              podrán descargar su certificado digital de participación directamente desde la plataforma.
             </p>
+            <Card className="mb-6 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-md">
+              <CardContent className="p-6 md:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="rounded-full bg-primary/10 p-3 text-primary shrink-0">
+                  <Award className="h-6 w-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground">Descargue su certificado</p>
+                  <p className="text-sm text-muted-foreground">
+                    Ingrese su nombre y verifique si cumple los requisitos de participación.
+                  </p>
+                </div>
+                <Button asChild className="shrink-0 w-full sm:w-auto">
+                  <Link to="/convencion/certificado">
+                    Ir a certificados
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
             <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border/80 bg-card shadow-lg ring-1 ring-primary/10">
               <img
                 src="/diploma-sample.jpg"
@@ -418,7 +436,7 @@ const ConvencionHub: React.FC = () => {
               />
             </div>
             <p className="mx-auto mt-4 max-w-2xl text-center text-xs italic text-muted-foreground">
-              Vista ilustrativa — el documento oficial será emitido por el comité organizador.
+              Vista ilustrativa — el certificado se genera automáticamente al verificar su participación.
             </p>
           </motion.section>
         </div>
