@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSupabase } from "@/lib/supabase";
+import { CONVENCION_COMMISSIONS } from "@/data/convencionCommissions";
 
 const MAX_WORDS = 300;
 
@@ -89,6 +90,20 @@ export const SummaryForm: React.FC<SummaryFormProps> = ({ commissionSlug, commis
     toast.success("Resumen publicado correctamente.");
     setSubmitted(true);
     onSubmitted();
+
+    // Notify admins via Telegram (fire-and-forget)
+    const commissionTitle =
+      CONVENCION_COMMISSIONS.find((c) => c.slug === commissionSlug)?.title ?? commissionSlug;
+    fetch("/api/notify-telegram", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title.trim(),
+        authors: authorsStr,
+        institution: institution.trim(),
+        commission: commissionTitle,
+      }),
+    }).catch(() => { /* silent */ });
   };
 
   if (submitted) {

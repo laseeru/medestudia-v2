@@ -96,6 +96,29 @@ const server = createServer(async (req, res) => {
         }));
       }
     });
+  } else if (req.url === '/api/notify-telegram' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', async () => {
+      try {
+        const handlerModule = await import('./api/notify-telegram.ts');
+        const handler = handlerModule.default;
+        const vercelReq = { method: 'POST', body: JSON.parse(body), headers: req.headers as Record<string, string>, query: {} };
+        let statusCode = 200;
+        let responseData: any = null;
+        const vercelRes = {
+          status: (code: number) => ({ json: (data: any) => { statusCode = code; responseData = data; } }),
+          json: (data: any) => { responseData = data; },
+        };
+        await handler(vercelReq, vercelRes);
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(responseData));
+      } catch (error: any) {
+        console.error('❌ Telegram notify error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message || 'Internal server error' }));
+      }
+    });
   } else {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
