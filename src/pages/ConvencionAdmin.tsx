@@ -42,10 +42,17 @@ interface CommentRow {
 
 const ADMIN_TOKEN_KEY = "medestudia_admin_auth";
 
-function checkPassword(input: string): boolean {
-  const expected = import.meta.env.VITE_ADMIN_PASSWORD;
-  if (!expected) return false;
-  return input === expected;
+async function checkPassword(input: string): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin-auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: input }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 function isAuthenticated(): boolean {
@@ -134,9 +141,10 @@ const ConvencionAdmin: React.FC = () => {
     return summaries.filter((s) => s.commission_slug === filterCom);
   }, [summaries, filterCom]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (checkPassword(password)) {
+    const ok = await checkPassword(password);
+    if (ok) {
       setAuthenticated(true);
       setAuthed(true);
       setPassword("");
