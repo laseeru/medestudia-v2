@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { CONVENCION_COMMISSIONS } from "@/data/convencionCommissions";
 import { getSupabase } from "@/lib/supabase";
@@ -100,6 +101,7 @@ const ConvencionAdmin: React.FC = () => {
 
   // Registration data
   const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
+  const [regError, setRegError] = useState<string | null>(null);
   const [regFilterCom, setRegFilterCom] = useState<string>("all");
 
   // Add registration form
@@ -134,8 +136,13 @@ const ConvencionAdmin: React.FC = () => {
     if (comRes.error) toast.error("Error al cargar comentarios.");
     else setComments((comRes.data as CommentRow[]) ?? []);
 
-    if (regRes.error) toast.error("Error al cargar registros.");
-    else setRegistrations((regRes.data as RegistrationRow[]) ?? []);
+    if (regRes.error) {
+      setRegError(regRes.error.message);
+      setRegistrations([]);
+    } else {
+      setRegError(null);
+      setRegistrations((regRes.data as RegistrationRow[]) ?? []);
+    }
   }, []);
 
   useEffect(() => {
@@ -647,6 +654,45 @@ const ConvencionAdmin: React.FC = () => {
         {/* ===== REGISTRATIONS TAB ===== */}
         {tab === "registrations" && (
           <>
+            {regError && (
+              <Alert className="mb-6 border-amber-500/30 bg-amber-500/5">
+                <AlertDescription className="text-sm">
+                  La tabla de registros no existe en Supabase.{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`create table if not exists public.registrations (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null,
+  email text,
+  commission_slug text not null,
+  institution text,
+  registered_at timestamptz not null default now()
+);
+
+create index if not exists registrations_commission_slug_idx on public.registrations (commission_slug);
+create index if not exists registrations_name_idx on public.registrations (full_name);
+
+alter table public.registrations enable row level security;
+
+drop policy if exists "registrations_select_anon" on public.registrations;
+drop policy if exists "registrations_insert_anon" on public.registrations;
+drop policy if exists "registrations_delete_anon" on public.registrations;
+
+create policy "registrations_select_anon" on public.registrations for select using (true);
+create policy "registrations_insert_anon" on public.registrations for insert with check (true);
+create policy "registrations_delete_anon" on public.registrations for delete using (true);`);
+                      toast.success("SQL copiado. Pégalo en Supabase SQL Editor y ejecútalo.");
+                    }}
+                    className="underline text-primary hover:text-primary/80 font-medium"
+                  >
+                    Copiar SQL
+                  </button>{" "}
+                  y ejecútalo en Supabase Dashboard → SQL Editor.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Stats */}
             <div className="grid gap-4 sm:grid-cols-3 mb-8">
               <Card className="border-border/80 shadow-sm">

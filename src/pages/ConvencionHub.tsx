@@ -15,6 +15,7 @@ import {
   ClipboardList,
   ChevronRight,
   ExternalLink,
+  Lock,
 } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -408,23 +409,17 @@ const ConvencionHub: React.FC = () => {
               Los participantes que hayan publicado al menos un resumen y comentado un mínimo de dos trabajos
               podrán descargar su certificado digital de participación directamente desde la plataforma.
             </p>
-            <Card className="mb-6 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-md">
-              <CardContent className="p-6 md:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="rounded-full bg-primary/10 p-3 text-primary shrink-0">
-                  <Award className="h-6 w-6" />
+            <Card className="mb-6 border-border/60 bg-muted/20 shadow-sm">
+              <CardContent className="p-6 md:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-4 opacity-70">
+                <div className="rounded-full bg-muted p-3 text-muted-foreground shrink-0">
+                  <Lock className="h-6 w-6" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground">Descargue su certificado</p>
+                  <p className="font-semibold text-foreground">Certificados no disponibles</p>
                   <p className="text-sm text-muted-foreground">
-                    Ingrese su nombre y verifique si cumple los requisitos de participación.
+                    Estarán disponibles al finalizar el programa de la Convención.
                   </p>
                 </div>
-                <Button asChild className="shrink-0 w-full sm:w-auto">
-                  <Link to="/convencion/certificado">
-                    Ir a certificados
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
               </CardContent>
             </Card>
             <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border/80 bg-card shadow-lg ring-1 ring-primary/10">
