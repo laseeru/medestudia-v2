@@ -5,9 +5,12 @@ import {
   AlertCircle,
   Award,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   Download,
+  ExternalLink,
   FileText,
+  Loader2,
   Merge,
   MessageCircle,
   Shield,
@@ -19,7 +22,6 @@ import {
   Trash2,
   UserPlus,
   XCircle,
-  ChevronDown,
 } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -134,6 +136,8 @@ const ConvencionAdmin: React.FC = () => {
 
   // CSV import
   const [csvText, setCsvText] = useState("");
+  const [sheetsUrl, setSheetsUrl] = useState("");
+  const [fetchingFromSheets, setFetchingFromSheets] = useState(false);
 
   // Name merging for certificate analysis (alias → canonical)
   const [nameMerges, setNameMerges] = useState<Map<string, string>>(() => loadMerges());
@@ -553,6 +557,25 @@ const ConvencionAdmin: React.FC = () => {
     );
     setCsvText("");
     await loadData();
+  };
+
+  const fetchFromSheets = async () => {
+    const url = sheetsUrl.trim();
+    if (!url) {
+      toast.error("Pega la URL de la hoja publicada.");
+      return;
+    }
+    setFetchingFromSheets(true);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const csv = await res.text();
+      setCsvText(csv);
+      toast.success("Datos cargados desde Google Sheets. Revisa e importa abajo.");
+    } catch {
+      toast.error("No se pudo obtener el CSV. Asegúrate de que la hoja esté publicada.");
+    }
+    setFetchingFromSheets(false);
   };
 
   // --- Login screen ---
@@ -1007,6 +1030,49 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                   <UserPlus className="mr-1.5 h-4 w-4" />
                   Añadir registro
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Google Sheets auto-import */}
+            <Card className="border-border/80 shadow-sm mb-8">
+              <CardHeader className="pb-3">
+                <CardTitle className="font-serif text-lg flex items-center gap-2">
+                  <ExternalLink className="h-5 w-5 text-primary" />
+                  Importar desde Google Sheets
+                </CardTitle>
+                <CardDescription>
+                  Publica la hoja de respuestas del formulario como CSV y pega la URL aquí.
+                  En Google Sheets: Archivo → Compartir → Publicar en web → CSV.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="sheets-url">URL pública de la hoja (CSV)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="sheets-url"
+                      value={sheetsUrl}
+                      onChange={(e) => setSheetsUrl(e.target.value)}
+                      placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"
+                      className="flex-1 font-mono text-xs"
+                    />
+                    <Button
+                      variant="secondary"
+                      onClick={fetchFromSheets}
+                      disabled={fetchingFromSheets || !sheetsUrl.trim()}
+                    >
+                      {fetchingFromSheets ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-1.5 h-4 w-4" />
+                      )}
+                      Obtener
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Los datos se cargarán en el campo CSV de abajo. Luego haz clic en "Importar".
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
