@@ -153,7 +153,7 @@ export const SummaryForm: React.FC<SummaryFormProps> = ({ commissionSlug, commis
       <CardHeader>
         <CardTitle className="font-serif text-xl">Enviar resumen</CardTitle>
         <CardDescription>
-          Máximo {MAX_WORDS} palabras, hasta 5 autores. Todos los campos marcados son obligatorios.
+          Máximo {MAX_WORDS} palabras, hasta 5 autores. El primer autor es obligatorio (debe estar registrado en la convención).
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -172,15 +172,17 @@ export const SummaryForm: React.FC<SummaryFormProps> = ({ commissionSlug, commis
                 id="author2"
                 value={author2}
                 onChange={(e) => setAuthor2(e.target.value)}
-                placeholder="Autor 2 *"
+                placeholder="Autor 2 (opcional)"
                 maxLength={200}
+                className="border-dashed border-muted-foreground/30"
               />
               <Input
                 id="author3"
                 value={author3}
                 onChange={(e) => setAuthor3(e.target.value)}
-                placeholder="Autor 3 *"
+                placeholder="Autor 3 (opcional)"
                 maxLength={200}
+                className="border-dashed border-muted-foreground/30"
               />
               <Input
                 id="author4"
