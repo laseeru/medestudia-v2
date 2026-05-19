@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  Award,
+  CheckCircle2,
   ChevronLeft,
   Download,
   FileText,
@@ -14,6 +16,7 @@ import {
   Upload,
   Trash2,
   UserPlus,
+  XCircle,
 } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -84,7 +87,7 @@ function getCommissionTitle(slug: string): string {
   return CONVENCION_COMMISSIONS.find((c) => c.slug === slug)?.title ?? slug;
 }
 
-type AdminTab = "summaries" | "registrations";
+type AdminTab = "summaries" | "registrations" | "certificates";
 
 const ConvencionAdmin: React.FC = () => {
   const [authed, setAuthed] = useState(isAuthenticated);
@@ -181,6 +184,75 @@ const ConvencionAdmin: React.FC = () => {
       byCommission: Object.fromEntries(byCom),
     };
   }, [registrations]);
+
+  const certAnalysis = useMemo(() => {
+    const authorMap = new Map<
+      string,
+      { summaries: { title: string; commission: string }[]; institutions: Set<string> }
+    >();
+
+    for (const s of summaries) {
+      const names = s.authors.split(";").map((n) => n.trim()).filter(Boolean);
+      for (const name of names) {
+        if (!authorMap.has(name)) {
+          authorMap.set(name, { summaries: [], institutions: new Set() });
+        }
+        const entry = authorMap.get(name)!;
+        entry.summaries.push({ title: s.title, commission: s.commission_slug });
+        if (s.institution) entry.institutions.add(s.institution);
+      }
+    }
+
+    const commentCountMap = new Map<string, number>();
+    for (const c of comments) {
+      const name = c.commenter_name.trim();
+      commentCountMap.set(name, (commentCountMap.get(name) ?? 0) + 1);
+    }
+
+    // Merge: a participant is anyone who appears as author OR commenter
+    const allNames = new Set([...authorMap.keys(), ...commentCountMap.keys()]);
+    const results: {
+      name: string;
+      summariesCount: number;
+      commentsCount: number;
+      qualifies: boolean;
+      summaries: { title: string; commission: string }[];
+      institutions: string[];
+    }[] = [];
+
+    // Only include people who have at least some activity
+    for (const name of allNames) {
+      const authorData = authorMap.get(name);
+      const sc = authorData?.summaries.length ?? 0;
+      const cc = commentCountMap.get(name) ?? 0;
+      if (sc === 0 && cc === 0) continue;
+      results.push({
+        name,
+        summariesCount: sc,
+        commentsCount: cc,
+        qualifies: sc >= 1 && cc >= 2,
+        summaries: authorData?.summaries ?? [],
+        institutions: [...(authorData?.institutions ?? [])],
+      });
+    }
+
+    results.sort((a, b) => {
+      // Qualifying first, then by total activity
+      if (a.qualifies !== b.qualifies) return a.qualifies ? -1 : 1;
+      return b.summariesCount + b.commentsCount - (a.summariesCount + a.commentsCount);
+    });
+
+    return results;
+  }, [summaries, comments]);
+
+  const certStats = useMemo(() => {
+    const qualified = certAnalysis.filter((p) => p.qualifies);
+    return {
+      total: certAnalysis.length,
+      qualified: qualified.length,
+      pending: certAnalysis.length - qualified.length,
+    };
+  }, [certAnalysis]);
 
   const filteredSummaries = useMemo(() => {
     if (filterCom === "all") return summaries;
@@ -470,6 +542,18 @@ const ConvencionAdmin: React.FC = () => {
           >
             <Users className="inline h-4 w-4 mr-1.5 -mt-0.5" />
             Registros ({regStats.total})
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("certificates")}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              tab === "certificates"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Award className="inline h-4 w-4 mr-1.5 -mt-0.5" />
+            Certificados ({certStats.qualified}/{certStats.total})
           </button>
         </div>
 
@@ -934,6 +1018,196 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+        {/* ===== CERTIFICATES TAB ===== */}
+        {tab === "certificates" && (
+          <>
+            {/* Stats */}
+            <div className="grid gap-4 sm:grid-cols-3 mb-8">
+              <Card className="border-border/80 shadow-sm">
+                <CardHeader className="pb-2 flex flex-row items-center gap-3">
+                  <Users className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total participantes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-foreground">{certStats.total}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/80 shadow-sm">
+                <CardHeader className="pb-2 flex flex-row items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Califican para certificado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-emerald-500">{certStats.qualified}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/80 shadow-sm">
+                <CardHeader className="pb-2 flex flex-row items-center gap-3">
+                  <XCircle className="h-5 w-5 text-amber-500" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Pendientes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-amber-500">{certStats.pending}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Commission breakdown for certificates */}
+            <Card className="border-border/80 shadow-sm mb-8">
+              <CardHeader className="pb-3">
+                <CardTitle className="font-serif text-lg">Análisis por comisión</CardTitle>
+                <CardDescription>
+                  Participantes que califican para certificado desglosados por comisión donde publicaron.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {CONVENCION_COMMISSIONS.map((c) => {
+                    const count = certAnalysis.filter(
+                      (p) => p.qualifies && p.summaries.some((s) => s.commission === c.slug),
+                    ).length;
+                    return (
+                      <div
+                        key={c.slug}
+                        className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2"
+                      >
+                        <span className="text-sm text-foreground truncate mr-2">{c.title}</span>
+                        <Badge variant={count > 0 ? "default" : "secondary"} className="shrink-0">
+                          {count}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Export */}
+            <div className="flex justify-end mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const qualified = certAnalysis.filter((p) => p.qualifies);
+                  const header = "Nombre,Resúmenes,Comentarios,Comisiones,Institución";
+                  const rows = qualified.map((p) =>
+                    [
+                      `"${p.name}"`,
+                      p.summariesCount,
+                      p.commentsCount,
+                      `"${[...new Set(p.summaries.map((s) => getCommissionTitle(s.commission)))].join("; ")}"`,
+                      `"${p.institutions.join("; ")}"`,
+                    ].join(","),
+                  );
+                  const blob = new Blob([header + "\n" + rows.join("\n")], {
+                    type: "text/csv;charset=utf-8;",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `convencion-qualified-${new Date().toISOString().slice(0, 10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success("CSV exportado.");
+                }}
+                disabled={certStats.qualified === 0}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                Exportar calificados (CSV)
+              </Button>
+            </div>
+
+            {/* Results table */}
+            <section className="space-y-4">
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Analizando participación…</p>
+              ) : certAnalysis.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardHeader>
+                    <CardTitle className="text-base font-medium">Sin datos</CardTitle>
+                    <CardDescription>
+                      Aún no hay resúmenes ni comentarios publicados. Los resultados aparecerán aquí
+                      automáticamente.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-border/80">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/80 bg-muted/30">
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">
+                          Participante
+                        </th>
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">
+                          Resúmenes
+                        </th>
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">
+                          Comentarios
+                        </th>
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Estado</th>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground hidden lg:table-cell">
+                          Comisiones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {certAnalysis.map((p) => (
+                        <tr
+                          key={p.name}
+                          className={`border-b border-border/40 hover:bg-muted/20 ${
+                            p.qualifies ? "" : "opacity-60"
+                          }`}
+                        >
+                          <td className="px-3 py-2.5">
+                            <div>
+                              <p className="font-medium text-foreground">{p.name}</p>
+                              {p.institutions.length > 0 && (
+                                <p className="text-xs text-muted-foreground hidden sm:block">
+                                  {p.institutions.join(", ")}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <Badge
+                              variant={p.summariesCount >= 1 ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {p.summariesCount}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <Badge
+                              variant={p.commentsCount >= 2 ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {p.commentsCount}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            {p.qualifies ? (
+                              <CheckCircle2 className="inline h-4 w-4 text-emerald-500" />
+                            ) : (
+                              <XCircle className="inline h-4 w-4 text-muted-foreground" />
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground hidden lg:table-cell">
+                            {[...new Set(p.summaries.map((s) => getCommissionTitle(s.commission)))].join("; ") ||
+                              "—"}
                           </td>
                         </tr>
                       ))}
