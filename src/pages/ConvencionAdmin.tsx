@@ -19,6 +19,7 @@ import {
   Trash2,
   UserPlus,
   XCircle,
+  ChevronDown,
 } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -136,6 +137,7 @@ const ConvencionAdmin: React.FC = () => {
 
   // Name merging for certificate analysis (alias → canonical)
   const [nameMerges, setNameMerges] = useState<Map<string, string>>(() => loadMerges());
+  const [mergesExpanded, setMergesExpanded] = useState(false);
 
   const loadData = useCallback(async () => {
     const sb = getSupabase();
@@ -1205,18 +1207,30 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
             {/* Active merges indicator */}
             {nameMerges.size > 0 && (
               <Card className="border-border/80 shadow-sm mb-8">
-                <CardHeader className="pb-3">
-                  <CardTitle className="font-serif text-lg flex items-center gap-2">
-                    <Merge className="h-5 w-5 text-primary" />
-                    Fusiones activas ({nameMerges.size})
-                  </CardTitle>
-                  <CardDescription>
-                    Nombres que se están tratando como la misma persona. Revierte individualmente o limpia todas.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {[...nameMerges.entries()].map(([alias, canonical]) => (
+                <button
+                  type="button"
+                  onClick={() => setMergesExpanded(!mergesExpanded)}
+                  className="w-full text-left"
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle className="font-serif text-lg flex items-center gap-2">
+                      <Merge className="h-5 w-5 text-primary" />
+                      Fusiones activas ({nameMerges.size})
+                      <ChevronDown
+                        className={`ml-auto h-4 w-4 text-muted-foreground transition-transform ${
+                          mergesExpanded ? "rotate-180" : ""
+                        }`}
+                      />
+                    </CardTitle>
+                    <CardDescription>
+                      Nombres que se están tratando como la misma persona. Revierte individualmente o limpia todas.
+                    </CardDescription>
+                  </CardHeader>
+                </button>
+                {mergesExpanded && (
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {[...nameMerges.entries()].map(([alias, canonical]) => (
                       <Badge key={alias} variant="secondary" className="gap-1.5 pl-2 pr-1.5 py-1 text-xs">
                         <span className="text-muted-foreground">{alias}</span>
                         <span className="text-muted-foreground/50">→</span>
@@ -1236,6 +1250,7 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                     Limpiar todas las fusiones
                   </Button>
                 </CardContent>
+              )}
               </Card>
             )}
 
