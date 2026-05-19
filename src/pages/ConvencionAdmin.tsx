@@ -427,6 +427,19 @@ const ConvencionAdmin: React.FC = () => {
     }
     const sb = getSupabase();
     if (!sb) return;
+
+    // Check for duplicate
+    const { data: existing } = await sb
+      .from("registrations")
+      .select("id, full_name, email")
+      .eq("full_name", newName.trim())
+      .eq("commission_slug", newCom)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      toast.warning(`Ya existe un registro para "${newName.trim()}" en esta comisión. Se ha omitido.`);
+      return;
+    }
+
     const { error } = await sb.from("registrations").insert({
       full_name: newName.trim(),
       email: newEmail.trim() || null,
@@ -490,6 +503,7 @@ const ConvencionAdmin: React.FC = () => {
 
     let imported = 0;
     let errors = 0;
+    let skipped = 0;
 
     for (let i = 1; i < lines.length; i++) {
       const row = lines[i].split(delim).map((c) => c.trim().replace(/^"|"$/g, ""));
@@ -511,6 +525,18 @@ const ConvencionAdmin: React.FC = () => {
         if (match) comSlug = match.slug;
       }
 
+      // Skip duplicate
+      const { data: dup } = await sb
+        .from("registrations")
+        .select("id")
+        .eq("full_name", name)
+        .eq("commission_slug", comSlug)
+        .limit(1);
+      if (dup && dup.length > 0) {
+        skipped++;
+        continue;
+      }
+
       const { error } = await sb.from("registrations").insert({
         full_name: name,
         email: email || null,
@@ -522,7 +548,9 @@ const ConvencionAdmin: React.FC = () => {
       else imported++;
     }
 
-    toast.success(`${imported} registros importados.${errors ? ` ${errors} errores.` : ""}`);
+    toast.success(
+      `${imported} registros importados.${skipped ? ` ${skipped} duplicados omitidos.` : ""}${errors ? ` ${errors} errores.` : ""}`,
+    );
     setCsvText("");
     await loadData();
   };
