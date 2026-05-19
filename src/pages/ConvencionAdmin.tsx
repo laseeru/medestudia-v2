@@ -136,8 +136,10 @@ const ConvencionAdmin: React.FC = () => {
 
   // CSV import
   const [csvText, setCsvText] = useState("");
-  const [sheetsUrl, setSheetsUrl] = useState("");
+  const [sheetsUrl, setSheetsUrl] = useState(() => localStorage.getItem("medestudia_sheets_url") ?? "");
   const [fetchingFromSheets, setFetchingFromSheets] = useState(false);
+  const [syncingRegistrations, setSyncingRegistrations] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => localStorage.getItem("medestudia_last_sync"));
 
   // Name merging for certificate analysis (alias → canonical)
   const [nameMerges, setNameMerges] = useState<Map<string, string>>(() => loadMerges());
@@ -576,6 +578,34 @@ const ConvencionAdmin: React.FC = () => {
       toast.error("No se pudo obtener el CSV. Asegúrate de que la hoja esté publicada.");
     }
     setFetchingFromSheets(false);
+  };
+
+  const syncRegistrations = async () => {
+    const url = sheetsUrl.trim();
+    if (!url) {
+      toast.error("Primero pega la URL de Google Sheets arriba.");
+      return;
+    }
+    setSyncingRegistrations(true);
+    try {
+      const res = await fetch(`/api/sync-registrations?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Error al sincronizar.");
+      } else {
+        toast.success(
+          `Sincronización completada: ${data.imported} importados, ${data.skipped} duplicados omitidos.`,
+        );
+        localStorage.setItem("medestudia_sheets_url", url);
+        const now = new Date().toLocaleString("es-CU", { dateStyle: "short", timeStyle: "short" });
+        localStorage.setItem("medestudia_last_sync", now);
+        setLastSyncTime(now);
+        await loadData();
+      }
+    } catch {
+      toast.error("Error de conexión al sincronizar.");
+    }
+    setSyncingRegistrations(false);
   };
 
   // --- Login screen ---
@@ -1071,6 +1101,33 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Los datos se cargarán en el campo CSV de abajo. Luego haz clic en "Importar".
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={syncRegistrations}
+                      disabled={syncingRegistrations || !sheetsUrl.trim()}
+                    >
+                      {syncingRegistrations ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="mr-1.5 h-4 w-4" />
+                      )}
+                      Sincronizar ahora
+                    </Button>
+                    {lastSyncTime && (
+                      <span className="text-xs text-muted-foreground">
+                        Última sincronización: {lastSyncTime}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground/60">
+                    La URL se guarda automáticamente. Para sincronización automática, configura una tarea
+                    periódica (cron-job.org) que haga GET a{" "}
+                    <code className="rounded bg-muted px-1 text-[10px]">
+                      /api/sync-registrations?url=...
+                    </code>
                   </p>
                 </div>
               </CardContent>
