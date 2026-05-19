@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  AlertCircle,
   Award,
   CheckCircle2,
   ChevronLeft,
   Download,
   FileText,
+  Merge,
   MessageCircle,
   Shield,
   Eye,
@@ -87,6 +89,59 @@ function getCommissionTitle(slug: string): string {
   return CONVENCION_COMMISSIONS.find((c) => c.slug === slug)?.title ?? slug;
 }
 
+/** Levenshtein distance between two strings */
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+/** Whether two person names likely refer to the same person */
+function namesAreSimilar(a: string, b: string): boolean {
+  const na = a.toLowerCase().trim().replace(/\s+/g, " ");
+  const nb = b.toLowerCase().trim().replace(/\s+/g, " ");
+  if (na === nb) return false; // exact match — not a "potential" duplicate
+
+  const dist = levenshtein(na, nb);
+  const maxLen = Math.max(na.length, nb.length);
+  // If distance is small relative to name length
+  if (maxLen > 0 && dist / maxLen <= 0.25) return true;
+
+  // Check if all parts of shorter name appear in longer (with fuzzy part match)
+  const partsA = na.split(" ");
+  const partsB = nb.split(" ");
+  const [shorter, longer] = partsA.length <= partsB.length ? [partsA, partsB] : [partsB, partsA];
+  const matched = shorter.filter((p) => longer.some((lp) => {
+    if (lp.includes(p) || p.includes(lp)) return true;
+    return lp.length > 2 && p.length > 2 && levenshtein(p, lp) <= 2;
+  }));
+  return matched.length >= Math.min(shorter.length, 2);
+}
+
+/** Key for sessionStorage */
+const MERGES_KEY = "medestudia_name_merges";
+
+function loadMerges(): Map<string, string> {
+  try {
+    const raw = sessionStorage.getItem(MERGES_KEY);
+    if (raw) return new Map(JSON.parse(raw));
+  } catch { /* ignore */ }
+  return new Map();
+}
+
+function saveMerges(map: Map<string, string>): void {
+  sessionStorage.setItem(MERGES_KEY, JSON.stringify([...map.entries()]));
+}
+
 type AdminTab = "summaries" | "registrations" | "certificates";
 
 const ConvencionAdmin: React.FC = () => {
@@ -115,6 +170,9 @@ const ConvencionAdmin: React.FC = () => {
 
   // CSV import
   const [csvText, setCsvText] = useState("");
+
+  // Name merging for certificate analysis (alias → canonical)
+  const [nameMerges, setNameMerges] = useState<Map<string, string>>(() => loadMerges());
 
   const loadData = useCallback(async () => {
     const sb = getSupabase();
@@ -186,6 +244,12 @@ const ConvencionAdmin: React.FC = () => {
   }, [registrations]);
 
   const certAnalysis = useMemo(() => {
+    // Resolve a name to its canonical form using merges
+    const resolve = (n: string): string => {
+      const trimmed = n.trim();
+      return nameMerges.get(trimmed) ?? trimmed;
+    };
+
     const authorMap = new Map<
       string,
       { summaries: { title: string; commission: string }[]; institutions: Set<string> }
@@ -193,7 +257,8 @@ const ConvencionAdmin: React.FC = () => {
 
     for (const s of summaries) {
       const names = s.authors.split(";").map((n) => n.trim()).filter(Boolean);
-      for (const name of names) {
+      for (const raw of names) {
+        const name = resolve(raw);
         if (!authorMap.has(name)) {
           authorMap.set(name, { summaries: [], institutions: new Set() });
         }
@@ -205,11 +270,11 @@ const ConvencionAdmin: React.FC = () => {
 
     const commentCountMap = new Map<string, number>();
     for (const c of comments) {
-      const name = c.commenter_name.trim();
+      const name = resolve(c.commenter_name);
       commentCountMap.set(name, (commentCountMap.get(name) ?? 0) + 1);
     }
 
-    // Merge: a participant is anyone who appears as author OR commenter
+    // A participant is anyone who appears as author OR commenter
     const allNames = new Set([...authorMap.keys(), ...commentCountMap.keys()]);
     const results: {
       name: string;
@@ -220,7 +285,6 @@ const ConvencionAdmin: React.FC = () => {
       institutions: string[];
     }[] = [];
 
-    // Only include people who have at least some activity
     for (const name of allNames) {
       const authorData = authorMap.get(name);
       const sc = authorData?.summaries.length ?? 0;
@@ -237,13 +301,12 @@ const ConvencionAdmin: React.FC = () => {
     }
 
     results.sort((a, b) => {
-      // Qualifying first, then by total activity
       if (a.qualifies !== b.qualifies) return a.qualifies ? -1 : 1;
       return b.summariesCount + b.commentsCount - (a.summariesCount + a.commentsCount);
     });
 
     return results;
-  }, [summaries, comments]);
+  }, [summaries, comments, nameMerges]);
 
   const certStats = useMemo(() => {
     const qualified = certAnalysis.filter((p) => p.qualifies);
@@ -253,6 +316,61 @@ const ConvencionAdmin: React.FC = () => {
       pending: certAnalysis.length - qualified.length,
     };
   }, [certAnalysis]);
+
+  /** Detect potential duplicate names not yet merged */
+  const potentialDuplicates = useMemo(() => {
+    const all: { nameA: string; nameB: string }[] = [];
+    // Collect all raw names (pre-merge)
+    const rawNames = new Set<string>();
+    for (const s of summaries) {
+      for (const n of s.authors.split(";").map((x) => x.trim()).filter(Boolean)) {
+        rawNames.add(n);
+      }
+    }
+    for (const c of comments) {
+      rawNames.add(c.commenter_name.trim());
+    }
+    const list = [...rawNames].sort();
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i], b = list[j];
+        if (nameMerges.has(a) || nameMerges.has(b)) continue; // already merged
+        const resolvedA = nameMerges.get(a) ?? a;
+        const resolvedB = nameMerges.get(b) ?? b;
+        if (resolvedA === resolvedB) continue; // same canonical already
+        if (namesAreSimilar(a, b)) {
+          all.push({ nameA: a, nameB: b });
+        }
+      }
+    }
+    return all;
+  }, [summaries, comments, nameMerges]);
+
+  const handleMerge = useCallback((alias: string, canonical: string) => {
+    setNameMerges((prev) => {
+      const next = new Map(prev);
+      next.set(alias, canonical);
+      saveMerges(next);
+      return next;
+    });
+    toast.success(`"${alias}" fusionado → "${canonical}"`);
+  }, []);
+
+  const handleUnmerge = useCallback((alias: string) => {
+    setNameMerges((prev) => {
+      const next = new Map(prev);
+      next.delete(alias);
+      saveMerges(next);
+      return next;
+    });
+    toast.success(`Fusión revertida para "${alias}"`);
+  }, []);
+
+  const handleClearAllMerges = useCallback(() => {
+    setNameMerges(new Map());
+    sessionStorage.removeItem(MERGES_KEY);
+    toast.success("Todas las fusiones de nombres han sido revertidas.");
+  }, []);
 
   const filteredSummaries = useMemo(() => {
     if (filterCom === "all") return summaries;
@@ -1064,6 +1182,99 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                 </CardContent>
               </Card>
             </div>
+
+            {/* Potential duplicates */}
+            {potentialDuplicates.length > 0 && (
+              <Card className="border-amber-500/40 shadow-sm mb-8">
+                <CardHeader className="pb-3">
+                  <CardTitle className="font-serif text-lg flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-amber-500" />
+                    Posibles duplicados detectados
+                  </CardTitle>
+                  <CardDescription>
+                    Los siguientes nombres podrían pertenecer a la misma persona. Fusiónalos para unificar su
+                    participación en el análisis de certificados.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {potentialDuplicates.slice(0, 50).map((dup, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2 text-sm"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium text-foreground truncate">{dup.nameA}</span>
+                          <span className="text-muted-foreground shrink-0">≈</span>
+                          <span className="font-medium text-foreground truncate">{dup.nameB}</span>
+                        </div>
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleMerge(dup.nameB, dup.nameA)}
+                          >
+                            ← Fusión
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleMerge(dup.nameA, dup.nameB)}
+                          >
+                            Fusión →
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {potentialDuplicates.length > 50 && (
+                      <p className="text-xs text-muted-foreground text-center pt-1">
+                        ... y {potentialDuplicates.length - 50} más. Las primeras 50 sugerencias se muestran
+                        arriba.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Active merges indicator */}
+            {nameMerges.size > 0 && (
+              <Card className="border-border/80 shadow-sm mb-8">
+                <CardHeader className="pb-3">
+                  <CardTitle className="font-serif text-lg flex items-center gap-2">
+                    <Merge className="h-5 w-5 text-primary" />
+                    Fusiones activas ({nameMerges.size})
+                  </CardTitle>
+                  <CardDescription>
+                    Nombres que se están tratando como la misma persona. Revierte individualmente o limpia todas.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {[...nameMerges.entries()].map(([alias, canonical]) => (
+                      <Badge key={alias} variant="secondary" className="gap-1.5 pl-2 pr-1.5 py-1 text-xs">
+                        <span className="text-muted-foreground">{alias}</span>
+                        <span className="text-muted-foreground/50">→</span>
+                        <span className="text-foreground">{canonical}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleUnmerge(alias)}
+                          className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
+                          title="Revertir fusión"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-xs h-7" onClick={handleClearAllMerges}>
+                    Limpiar todas las fusiones
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Commission breakdown for certificates */}
             <Card className="border-border/80 shadow-sm mb-8">
