@@ -4,12 +4,6 @@
   "outputDirectory": "dist",
   "devCommand": "vite",
   "framework": "vite",
-  "crons": [
-    {
-      "path": "/api/sync-registrations",
-      "schedule": "0 */6 * * *"
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
