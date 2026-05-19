@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSupabase } from "@/lib/supabase";
 import { CONVENCION_COMMISSIONS } from "@/data/convencionCommissions";
+import { namesAreSimilar, normalizeName } from "@/lib/nameMatch";
 
 const MAX_WORDS = 300;
 
@@ -19,9 +20,10 @@ export interface SummaryFormProps {
   commissionSlug: string;
   commissionWhatsapp: string;
   onSubmitted: () => void;
+  registeredNames: string[];
 }
 
-export const SummaryForm: React.FC<SummaryFormProps> = ({ commissionSlug, commissionWhatsapp, onSubmitted }) => {
+export const SummaryForm: React.FC<SummaryFormProps> = ({ commissionSlug, commissionWhatsapp, onSubmitted, registeredNames }) => {
   const [author1, setAuthor1] = useState("");
   const [author2, setAuthor2] = useState("");
   const [author3, setAuthor3] = useState("");
@@ -67,6 +69,16 @@ export const SummaryForm: React.FC<SummaryFormProps> = ({ commissionSlug, commis
     }
     if (overLimit) {
       toast.error(`El resumen no puede superar ${MAX_WORDS} palabras.`);
+      return;
+    }
+
+    // Check author1 is registered
+    const normAuthor1 = normalizeName(author1);
+    const isRegistered = registeredNames.some(
+      (rn) => normalizeName(rn) === normAuthor1 || namesAreSimilar(rn, author1),
+    );
+    if (!isRegistered) {
+      toast.error("El autor principal debe estar registrado en la convención. Regístrate primero en el formulario de inscripción.");
       return;
     }
 

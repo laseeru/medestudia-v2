@@ -33,9 +33,10 @@ export interface CommentRow {
 
 export interface SummaryCardProps {
   summary: SummaryRow;
+  registeredNames: string[];
 }
 
-export const SummaryCard: React.FC<SummaryCardProps> = ({ summary }) => {
+export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNames }) => {
   const [expanded, setExpanded] = useState(false);
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -118,6 +119,15 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary }) => {
     }
     if (trimmed.length < MIN_COMMENT) {
       toast.error(`El comentario debe tener al menos ${MIN_COMMENT} caracteres.`);
+      return;
+    }
+
+    // Check commenter is registered
+    const isRegistered = registeredNames.some(
+      (rn) => normalizeName(rn) === normalizeName(trimmedName) || namesAreSimilar(rn, trimmedName),
+    );
+    if (!isRegistered) {
+      toast.error("Debes estar registrado en la convención para comentar. Regístrate primero en el formulario de inscripción.");
       return;
     }
 

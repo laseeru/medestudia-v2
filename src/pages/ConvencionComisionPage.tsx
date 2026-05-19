@@ -17,6 +17,7 @@ const ConvencionComisionPage: React.FC = () => {
   const commission = getCommissionBySlug(slug);
   const [summaries, setSummaries] = useState<SummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [registeredNames, setRegisteredNames] = useState<string[]>([]);
 
   useEffect(() => {
     applySeo({
@@ -28,6 +29,18 @@ const ConvencionComisionPage: React.FC = () => {
       image: "https://medestudia-v2.vercel.app/og-convencion.png",
     });
   }, [commission, slug]);
+
+  // Load registered names for submission validation
+  useEffect(() => {
+    const sb = getSupabase();
+    if (!sb || !isSupabaseConfigured()) return;
+    sb.from("registrations")
+      .select("full_name")
+      .then(({ data }) => {
+        if (data) setRegisteredNames(data.map((r: { full_name: string }) => r.full_name));
+      })
+      .catch(() => {});
+  }, []);
 
   const loadSummaries = useCallback(async () => {
     if (!commission || !isSupabaseConfigured()) {
@@ -108,7 +121,7 @@ const ConvencionComisionPage: React.FC = () => {
 
         <section className="mb-12 space-y-4">
           <h2 className="font-serif text-lg font-semibold text-foreground">Nuevo resumen</h2>
-          <SummaryForm commissionSlug={commission.slug} commissionWhatsapp={commission.whatsapp} onSubmitted={loadSummaries} />
+          <SummaryForm commissionSlug={commission.slug} commissionWhatsapp={commission.whatsapp} onSubmitted={loadSummaries} registeredNames={registeredNames} />
         </section>
 
         <section className="space-y-4">
@@ -126,7 +139,7 @@ const ConvencionComisionPage: React.FC = () => {
             <ul className="space-y-6">
               {summaries.map((s) => (
                 <li key={s.id}>
-                  <SummaryCard summary={s} />
+                  <SummaryCard summary={s} registeredNames={registeredNames} />
                 </li>
               ))}
             </ul>
