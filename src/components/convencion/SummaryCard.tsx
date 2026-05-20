@@ -11,7 +11,7 @@ import { getSupabase } from "@/lib/supabase";
 import { namesAreSimilar, normalizeName } from "@/lib/nameMatch";
 
 const MIN_COMMENT = 10;
-const EDIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const EDIT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface SummaryRow {
   id: string;
