@@ -144,6 +144,7 @@ const ConvencionAdmin: React.FC = () => {
   // Name merging for certificate analysis (alias → canonical)
   const [nameMerges, setNameMerges] = useState<Map<string, string>>(() => loadMerges());
   const [mergesExpanded, setMergesExpanded] = useState(false);
+  const [expandedCertRow, setExpandedCertRow] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const sb = getSupabase();
@@ -1489,41 +1490,53 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border/80 bg-muted/30">
-                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground min-w-[100px]">
                           Participante
                         </th>
-                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground w-[90px]">
                           Resúmenes
                         </th>
-                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground w-[100px]">
                           Comentarios
                         </th>
-                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Estado</th>
-                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground hidden lg:table-cell">
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground w-[70px]">Estado</th>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">
                           Títulos
                         </th>
-                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground hidden lg:table-cell">
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">
                           Comisiones
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {certAnalysis.map((p) => (
-                        <tr
-                          key={p.name}
-                          className={`border-b border-border/40 hover:bg-muted/20 ${
-                            p.qualifies ? "" : "opacity-60"
-                          }`}
-                        >
-                          <td className="px-3 py-2.5">
-                            <div>
-                              <p className="font-medium text-foreground">{p.name}</p>
-                              {p.institutions.length > 0 && (
-                                <p className="text-xs text-muted-foreground hidden sm:block">
-                                  {p.institutions.join(", ")}
-                                </p>
-                              )}
-                            </div>
+                        <React.Fragment key={p.name}>
+                          <tr
+                            className={`border-b border-border/40 hover:bg-muted/20 cursor-pointer ${
+                              p.qualifies ? "" : "opacity-60"
+                            }`}
+                            onClick={() =>
+                              setExpandedCertRow(expandedCertRow === p.name ? null : p.name)
+                            }
+                          >
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center gap-2">
+                                <ChevronDown
+                                  className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${
+                                    expandedCertRow === p.name ? "rotate-0" : "-rotate-90"
+                                  }`}
+                                />
+                                <div className="min-w-0">
+                                  <p className="font-medium text-foreground truncate max-w-[200px]">
+                                    {p.name}
+                                  </p>
+                                  {p.institutions.length > 0 && (
+                                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                      {p.institutions.join(", ")}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
                           </td>
                           <td className="px-3 py-2.5 text-center">
                             <Badge
@@ -1548,7 +1561,7 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                               <XCircle className="inline h-4 w-4 text-muted-foreground" />
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-xs text-muted-foreground hidden lg:table-cell max-w-[280px]">
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[280px]">
                             {p.summaries.length > 0 ? (
                               <ul className="list-disc list-inside space-y-0.5">
                                 {p.summaries.map((s, i) => (
@@ -1561,12 +1574,41 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                               "—"
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-xs text-muted-foreground hidden lg:table-cell">
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground">
                             {[...new Set(p.summaries.map((s) => getCommissionTitle(s.commission)))].join("; ") ||
                               "—"}
                           </td>
                         </tr>
-                      ))}
+                        {expandedCertRow === p.name && (
+                          <tr className="border-b border-border/40 bg-muted/10">
+                            <td colSpan={6} className="px-6 py-4">
+                              <div className="space-y-2 text-sm">
+                                <p className="font-medium text-foreground mb-1">Resúmenes</p>
+                                {p.summaries.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground">Ninguno.</p>
+                                ) : (
+                                  <ul className="space-y-1.5">
+                                    {p.summaries.map((s, i) => (
+                                      <li key={i} className="text-xs text-muted-foreground">
+                                        <span className="font-medium text-foreground">
+                                          {getCommissionTitle(s.commission)}
+                                        </span>
+                                        : {s.title}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                                <p className="font-medium text-foreground mb-1 mt-3">Comentarios</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {p.commentsCount}{" "}
+                                  {p.commentsCount === 1 ? "comentario realizado" : "comentarios realizados"}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
                     </tbody>
                   </table>
                 </div>
