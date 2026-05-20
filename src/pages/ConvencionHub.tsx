@@ -362,6 +362,29 @@ const ConvencionHub: React.FC = () => {
             </div>
           </motion.section>
 
+          {/* Recordatorio importante */}
+          <motion.section {...fadeIn} className="scroll-mt-16">
+            <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/[0.03] shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-primary/8 p-2 text-primary shrink-0 mt-0.5">
+                    <Info className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif text-base font-semibold text-foreground">
+                      Recordatorio Importante
+                    </CardTitle>
+                    <CardDescription className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                      La participación activa en los debates científicos forma parte de los requisitos para la
+                      obtención del certificado. Cada participante deberá comentar y aportar criterios académicos
+                      en los trabajos de otros autores dentro de su comisión correspondiente.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          </motion.section>
+
           <Separator className="opacity-50" />
 
           {/* Inscripción */}
