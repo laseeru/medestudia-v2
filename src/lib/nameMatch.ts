@@ -14,27 +14,53 @@ export function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
-/** Whether two person names likely refer to the same person */
-export function namesAreSimilar(a: string, b: string): boolean {
-  const na = a.toLowerCase().trim().replace(/\s+/g, " ");
-  const nb = b.toLowerCase().trim().replace(/\s+/g, " ");
-  if (na === nb) return false;
-
-  const dist = levenshtein(na, nb);
-  const maxLen = Math.max(na.length, nb.length);
-  if (maxLen > 0 && dist / maxLen <= 0.25) return true;
-
-  const partsA = na.split(" ");
-  const partsB = nb.split(" ");
-  const [shorter, longer] = partsA.length <= partsB.length ? [partsA, partsB] : [partsB, partsA];
-  const matched = shorter.filter((p) => longer.some((lp) => {
-    if (lp.includes(p) || p.includes(lp)) return true;
-    return lp.length > 2 && p.length > 2 && levenshtein(p, lp) <= 2;
-  }));
-  return matched.length >= Math.min(shorter.length, 2);
-}
-
 /** Normalize a name for comparison */
 export function normalizeName(name: string): string {
   return name.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Whether two person names likely refer to the same person.
+ * Strict algorithm: ignores single-char parts, requires >=60% of parts to match,
+ * and part-level Levenshtein distance of at most 1.
+ */
+export function namesAreSimilar(a: string, b: string): boolean {
+  const na = normalizeName(a);
+  const nb = normalizeName(b);
+  if (na === nb) return false;
+
+  // Quick length sanity check — if lengths differ by more than 40%, skip
+  const maxLen = Math.max(na.length, nb.length);
+  if (maxLen > 0 && Math.abs(na.length - nb.length) / maxLen > 0.4) return false;
+
+  // Whole-name Levenshtein — strict threshold (≤20% different)
+  const fullDist = levenshtein(na, nb);
+  if (maxLen > 0 && fullDist / maxLen <= 0.2) return true;
+
+  // Part-based matching — ignore single-character parts
+  const partsA = na.split(" ").filter((p) => p.length > 1);
+  const partsB = nb.split(" ").filter((p) => p.length > 1);
+
+  // Need at least 2 meaningful parts in each name
+  if (partsA.length < 2 || partsB.length < 2) return false;
+
+  const [shorter, longer] = partsA.length <= partsB.length ? [partsA, partsB] : [partsB, partsA];
+
+  let matched = 0;
+  for (const sp of shorter) {
+    for (const lp of longer) {
+      if (sp === lp) {
+        matched++;
+        break;
+      }
+      // Only compare parts longer than 3 chars and distance ≤ 1
+      if (sp.length > 3 && lp.length > 3 && levenshtein(sp, lp) <= 1) {
+        matched++;
+        break;
+      }
+    }
+  }
+
+  // At least 60% of the shorter name's parts must match, minimum 2
+  return matched >= Math.ceil(shorter.length * 0.6) && matched >= 2;
 }

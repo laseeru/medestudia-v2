@@ -93,19 +93,19 @@ function getCommissionTitle(slug: string): string {
   return CONVENCION_COMMISSIONS.find((c) => c.slug === slug)?.title ?? slug;
 }
 
-/** Key for sessionStorage */
+/** Key for localStorage */
 const MERGES_KEY = "medestudia_name_merges";
 
 function loadMerges(): Map<string, string> {
   try {
-    const raw = sessionStorage.getItem(MERGES_KEY);
+    const raw = localStorage.getItem(MERGES_KEY);
     if (raw) return new Map(JSON.parse(raw));
   } catch { /* ignore */ }
   return new Map();
 }
 
 function saveMerges(map: Map<string, string>): void {
-  sessionStorage.setItem(MERGES_KEY, JSON.stringify([...map.entries()]));
+  localStorage.setItem(MERGES_KEY, JSON.stringify([...map.entries()]));
 }
 
 type AdminTab = "summaries" | "registrations" | "certificates";
@@ -339,7 +339,7 @@ const ConvencionAdmin: React.FC = () => {
 
   const handleClearAllMerges = useCallback(() => {
     setNameMerges(new Map());
-    sessionStorage.removeItem(MERGES_KEY);
+    localStorage.removeItem(MERGES_KEY);
     toast.success("Todas las fusiones de nombres han sido revertidas.");
   }, []);
 
