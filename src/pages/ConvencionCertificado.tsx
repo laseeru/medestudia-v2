@@ -375,6 +375,7 @@ const ConvencionCertificado: React.FC = () => {
                 <CertificatePreview
                   ref={certRef}
                   participantName={result.name}
+                  summaryTitle={result.summaries[0]?.title}
                   institution={result.institution ?? undefined}
                   summariesCount={result.summariesCount}
                   commentsCount={result.commentsCount}

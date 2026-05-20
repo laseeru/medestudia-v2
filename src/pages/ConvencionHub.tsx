@@ -424,7 +424,7 @@ const ConvencionHub: React.FC = () => {
             </Card>
             <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border/80 bg-card shadow-lg ring-1 ring-primary/10">
               <img
-                src="/diploma-sample.jpg"
+                src="/certificate-template.png"
                 alt="Ejemplo ilustrativo de certificado digital de participación, Convención Científica 2026"
                 className="h-auto w-full object-contain"
                 loading="lazy"
