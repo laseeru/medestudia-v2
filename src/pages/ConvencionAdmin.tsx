@@ -1500,6 +1500,9 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                         </th>
                         <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Estado</th>
                         <th className="text-left px-3 py-2.5 font-medium text-muted-foreground hidden lg:table-cell">
+                          Títulos
+                        </th>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground hidden lg:table-cell">
                           Comisiones
                         </th>
                       </tr>
@@ -1543,6 +1546,19 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                               <CheckCircle2 className="inline h-4 w-4 text-emerald-500" />
                             ) : (
                               <XCircle className="inline h-4 w-4 text-muted-foreground" />
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-muted-foreground hidden lg:table-cell max-w-[280px]">
+                            {p.summaries.length > 0 ? (
+                              <ul className="list-disc list-inside space-y-0.5">
+                                {p.summaries.map((s, i) => (
+                                  <li key={i} className="truncate" title={s.title}>
+                                    {s.title}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              "—"
                             )}
                           </td>
                           <td className="px-3 py-2.5 text-xs text-muted-foreground hidden lg:table-cell">
