@@ -11,7 +11,7 @@ import { getSupabase } from "@/lib/supabase";
 import { namesAreSimilar, normalizeName } from "@/lib/nameMatch";
 
 const MIN_COMMENT = 10;
-const EDIT_WINDOW_MS = 2 * 60 * 60 * 1000;
+const EDIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export interface SummaryRow {
   id: string;
@@ -48,6 +48,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
   const [editingSummary, setEditingSummary] = useState(false);
   const [editTitle, setEditTitle] = useState(summary.title);
   const [editSummary, setEditSummary] = useState(summary.summary);
+  const [editAuthors, setEditAuthors] = useState(summary.authors);
+  const [editInstitution, setEditInstitution] = useState(summary.institution);
   const [editSaving, setEditSaving] = useState(false);
 
   // Edit mode for comments (stores comment id being edited)
@@ -156,10 +158,19 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
       toast.error("El título y el contenido no pueden estar vacíos.");
       return;
     }
+    if (!editAuthors.trim()) {
+      toast.error("Debe haber al menos un autor.");
+      return;
+    }
     setEditSaving(true);
     const { error } = await sb
       .from("summaries")
-      .update({ title: editTitle.trim(), summary: editSummary.trim() })
+      .update({
+        title: editTitle.trim(),
+        summary: editSummary.trim(),
+        authors: editAuthors.trim(),
+        institution: editInstitution.trim() || null,
+      })
       .eq("id", summary.id);
     setEditSaving(false);
     if (error) {
@@ -168,9 +179,11 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
     }
     toast.success("Resumen actualizado.");
     setEditingSummary(false);
-    // Update the summary object in place (parent will re-render from loadSummaries)
+    // Update the summary object in place
     summary.title = editTitle.trim();
     summary.summary = editSummary.trim();
+    summary.authors = editAuthors.trim();
+    summary.institution = editInstitution.trim();
   };
 
   const handleDeleteSummary = async () => {
@@ -306,6 +319,23 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
             {editingSummary ? (
               <div className="space-y-3 rounded-md border border-primary/30 bg-muted/20 p-3">
                 <div className="space-y-1.5">
+                  <Label className="text-xs">Autores</Label>
+                  <Input
+                    value={editAuthors}
+                    onChange={(e) => setEditAuthors(e.target.value)}
+                    placeholder="Separados por punto y coma"
+                    maxLength={500}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Institución</Label>
+                  <Input
+                    value={editInstitution}
+                    onChange={(e) => setEditInstitution(e.target.value)}
+                    maxLength={300}
+                  />
+                </div>
+                <div className="space-y-1.5">
                   <Label className="text-xs">Título</Label>
                   <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} maxLength={400} />
                 </div>
@@ -330,6 +360,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
                       setEditingSummary(false);
                       setEditTitle(summary.title);
                       setEditSummary(summary.summary);
+                      setEditAuthors(summary.authors);
+                      setEditInstitution(summary.institution);
                     }}
                   >
                     <X className="mr-1 h-3.5 w-3.5" />
@@ -353,6 +385,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
                   onClick={() => {
                     setEditTitle(summary.title);
                     setEditSummary(summary.summary);
+                    setEditAuthors(summary.authors);
+                    setEditInstitution(summary.institution);
                     setEditingSummary(true);
                   }}
                 >
