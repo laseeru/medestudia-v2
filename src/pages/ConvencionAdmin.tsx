@@ -93,21 +93,6 @@ function getCommissionTitle(slug: string): string {
   return CONVENCION_COMMISSIONS.find((c) => c.slug === slug)?.title ?? slug;
 }
 
-/** Key for localStorage */
-const MERGES_KEY = "medestudia_name_merges";
-
-function loadMerges(): Map<string, string> {
-  try {
-    const raw = localStorage.getItem(MERGES_KEY);
-    if (raw) return new Map(JSON.parse(raw));
-  } catch { /* ignore */ }
-  return new Map();
-}
-
-function saveMerges(map: Map<string, string>): void {
-  localStorage.setItem(MERGES_KEY, JSON.stringify([...map.entries()]));
-}
-
 type AdminTab = "summaries" | "registrations" | "certificates";
 
 const ConvencionAdmin: React.FC = () => {
@@ -142,7 +127,7 @@ const ConvencionAdmin: React.FC = () => {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => localStorage.getItem("medestudia_last_sync"));
 
   // Name merging for certificate analysis (alias → canonical)
-  const [nameMerges, setNameMerges] = useState<Map<string, string>>(() => loadMerges());
+  const [nameMerges, setNameMerges] = useState<Map<string, string>>(new Map());
   const [mergesExpanded, setMergesExpanded] = useState(false);
   const [expandedCertRow, setExpandedCertRow] = useState<string | null>(null);
 
@@ -175,6 +160,31 @@ const ConvencionAdmin: React.FC = () => {
     } else {
       setRegError(null);
       setRegistrations((regRes.data as RegistrationRow[]) ?? []);
+    }
+
+    // Load name merges from Supabase (with localStorage fallback migration)
+    if (sb) {
+      const { data: mergeRows } = await sb
+        .from("name_merges")
+        .select("alias, canonical");
+      if (mergeRows && mergeRows.length > 0) {
+        setNameMerges(new Map(mergeRows.map((r: { alias: string; canonical: string }) => [r.alias, r.canonical])));
+      } else {
+        // Migrate from localStorage if Supabase is empty
+        const legacyRaw = localStorage.getItem("medestudia_name_merges");
+        if (legacyRaw) {
+          try {
+            const legacy = new Map(JSON.parse(legacyRaw));
+            if (legacy.size > 0) {
+              setNameMerges(legacy);
+              // Push to Supabase
+              const rows = [...legacy.entries()].map(([alias, canonical]) => ({ alias, canonical }));
+              const { error: migErr } = await sb.from("name_merges").upsert(rows, { onConflict: "alias" });
+              if (!migErr) localStorage.removeItem("medestudia_name_merges");
+            }
+          } catch { /* ignore */ }
+        }
+      }
     }
   }, []);
 
@@ -318,29 +328,38 @@ const ConvencionAdmin: React.FC = () => {
     return all;
   }, [summaries, comments, nameMerges]);
 
-  const handleMerge = useCallback((alias: string, canonical: string) => {
+  const handleMerge = useCallback(async (alias: string, canonical: string) => {
+    const sb = getSupabase();
+    if (sb) {
+      await sb.from("name_merges").upsert({ alias, canonical }, { onConflict: "alias" });
+    }
     setNameMerges((prev) => {
       const next = new Map(prev);
       next.set(alias, canonical);
-      saveMerges(next);
       return next;
     });
     toast.success(`"${alias}" fusionado → "${canonical}"`);
   }, []);
 
-  const handleUnmerge = useCallback((alias: string) => {
+  const handleUnmerge = useCallback(async (alias: string) => {
+    const sb = getSupabase();
+    if (sb) {
+      await sb.from("name_merges").delete().eq("alias", alias);
+    }
     setNameMerges((prev) => {
       const next = new Map(prev);
       next.delete(alias);
-      saveMerges(next);
       return next;
     });
     toast.success(`Fusión revertida para "${alias}"`);
   }, []);
 
-  const handleClearAllMerges = useCallback(() => {
+  const handleClearAllMerges = useCallback(async () => {
+    const sb = getSupabase();
+    if (sb) {
+      await sb.from("name_merges").delete().neq("alias", "__nonexistent__");
+    }
     setNameMerges(new Map());
-    localStorage.removeItem(MERGES_KEY);
     toast.success("Todas las fusiones de nombres han sido revertidas.");
   }, []);
 
