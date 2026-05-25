@@ -1456,7 +1456,59 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
             </Card>
 
             {/* Export */}
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-2 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const resolve = (n: string): string =>
+                    nameMerges.get(n.trim()) ?? n.trim();
+
+                  const commentCount = new Map<string, number>();
+                  for (const c of comments) {
+                    const name = resolve(c.commenter_name);
+                    commentCount.set(name, (commentCount.get(name) ?? 0) + 1);
+                  }
+
+                  const rows: string[] = [];
+                  for (const s of summaries) {
+                    const authors = s.authors
+                      .split(";")
+                      .map((a) => a.trim())
+                      .filter(Boolean);
+
+                    // Author1 always included
+                    const author1 = resolve(authors[0] ?? "");
+                    if (author1) {
+                      rows.push(`"${author1}","${s.title}"`);
+                    }
+
+                    // Co-authors only if they have ≥2 comments
+                    for (let i = 1; i < authors.length; i++) {
+                      const name = resolve(authors[i]);
+                      if (name && (commentCount.get(name) ?? 0) >= 2) {
+                        rows.push(`"${name}","${s.title}"`);
+                      }
+                    }
+                  }
+
+                  const header = "Participante,Título del Resumen";
+                  const blob = new Blob([header + "\n" + rows.join("\n")], {
+                    type: "text/csv;charset=utf-8;",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `participantes-por-resumen-${new Date().toISOString().slice(0, 10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success(`${rows.length} filas exportadas.`);
+                }}
+                disabled={summaries.length === 0}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                Participantes por resumen (CSV)
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
