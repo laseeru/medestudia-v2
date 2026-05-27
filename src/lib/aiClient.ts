@@ -123,7 +123,7 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
 
     // If the response is an error type, throw
     if (data.type === 'error') {
-      throw new Error(data.error || 'Unknown error from AI service');
+      throw new Error(data.raw ? `${data.error}\n\nRespuesta del modelo: ${data.raw.substring(0, 500)}` : data.error);
     }
 
     return data;

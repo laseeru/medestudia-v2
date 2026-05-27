@@ -485,12 +485,36 @@ Provide a structured step-by-step guideline. Explicitly mention "${input}" in th
 // Helper to parse and validate JSON response
 function parseJSONResponse(text: string): AIResponse | null {
   try {
-    // Remove markdown code blocks if present
-    const cleaned = text
+    let cleaned = text
       .replace(/```json\s*/g, '')
       .replace(/```\s*/g, '')
       .trim();
-    
+
+    // Find first { or [ and last } or ] to strip surrounding non-JSON text
+    const firstBrace = cleaned.indexOf('{');
+    const firstBracket = cleaned.indexOf('[');
+    const jsonStart = firstBrace === -1
+      ? firstBracket
+      : firstBracket === -1
+        ? firstBrace
+        : Math.min(firstBrace, firstBracket);
+    if (jsonStart === -1) return null;
+
+    // Find matching closing character
+    let jsonEnd = -1;
+    const openChar = cleaned[jsonStart];
+    if (openChar === '{') {
+      // Find last } after the first {
+      const lastClose = cleaned.lastIndexOf('}');
+      if (lastClose > jsonStart) jsonEnd = lastClose + 1;
+    } else if (openChar === '[') {
+      const lastClose = cleaned.lastIndexOf(']');
+      if (lastClose > jsonStart) jsonEnd = lastClose + 1;
+    }
+    if (jsonEnd === -1) return null;
+
+    cleaned = cleaned.slice(jsonStart, jsonEnd);
+
     return JSON.parse(cleaned) as AIResponse;
   } catch (e) {
     return null;
@@ -572,8 +596,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       requestBody.model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
     }
 
-    // Only use JSON mode for non-streaming structured responses
-    if (!useStreaming && (body.tool === 'guides' || body.tool === 'mcq' || body.tool === 'quiz' || body.tool === 'explain')) {
+    // Only use JSON response format for DeepSeek API; Azure Foundry may not support it
+    if (!useStreaming && provider === 'deepseek' && (body.tool === 'guides' || body.tool === 'mcq' || body.tool === 'quiz' || body.tool === 'explain')) {
       requestBody.response_format = { type: 'json_object' };
     }
 
@@ -755,17 +779,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     parsedResponse = parseJSONResponse(content);
 
     if (!parsedResponse) {
-      // Try to extract JSON from content if it's wrapped
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedResponse = parseJSONResponse(jsonMatch[0]);
-      }
-    }
-
-    if (!parsedResponse) {
       return res.status(200).json({
         type: 'error',
-        error: 'Model returned non-JSON',
+        error: `Model returned non-JSON: "${content.substring(0, 200)}"`,
         raw: content.substring(0, 1000)
       } as ErrorResponse);
     }
