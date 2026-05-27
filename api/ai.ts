@@ -121,7 +121,7 @@ const MAX_INPUT_LENGTH = 2000;
 // Tool-specific token limits for optimal performance
 const TOKEN_LIMITS = {
   mcq: 600,      // Short question + options + explanation
-  quiz: 1200,    // 5 questions with concise explanations
+  quiz: 2500,    // 5 questions with concise explanations (~500 tokens per Q&A)
   explain: 850,  // Structured explanation
   chat: 950,     // Conversational responses (adaptive depth)
   guides: 1100,  // Structured guidelines
@@ -596,8 +596,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       requestBody.model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
     }
 
-    // Only use JSON response format for DeepSeek API; Azure Foundry may not support it
-    if (!useStreaming && provider === 'deepseek' && (body.tool === 'guides' || body.tool === 'mcq' || body.tool === 'quiz' || body.tool === 'explain')) {
+    // Use JSON response format for structured tool responses
+    if (!useStreaming && (body.tool === 'guides' || body.tool === 'mcq' || body.tool === 'quiz' || body.tool === 'explain')) {
       requestBody.response_format = { type: 'json_object' };
     }
 
