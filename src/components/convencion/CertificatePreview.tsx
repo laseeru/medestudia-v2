@@ -19,7 +19,7 @@ const CertificatePreview = forwardRef<HTMLDivElement, CertificatePreviewProps>(
         style={{
           width: "800px",
           aspectRatio: "977 / 731",
-          backgroundImage: "url(/certificate-template.png)",
+          backgroundImage: "url(/certificate-template.png?v=2)",
           backgroundSize: "100% 100%",
           backgroundPosition: "center",
         }}
