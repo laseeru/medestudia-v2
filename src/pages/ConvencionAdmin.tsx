@@ -276,7 +276,7 @@ const ConvencionAdmin: React.FC = () => {
         name,
         summariesCount: sc,
         commentsCount: cc,
-        qualifies: sc >= 1 && cc >= 2,
+        qualifies: sc >= 1,
         summaries: authorData?.summaries ?? [],
         institutions: [...(authorData?.institutions ?? [])],
       });
@@ -1483,10 +1483,10 @@ create policy "registrations_delete_anon" on public.registrations for delete usi
                       rows.push(`"${author1}","${s.title}"`);
                     }
 
-                    // Co-authors only if they have ≥2 comments
+                    // Co-authors always included (remove comment threshold)
                     for (let i = 1; i < authors.length; i++) {
                       const name = resolve(authors[i]);
-                      if (name && (commentCount.get(name) ?? 0) >= 2) {
+                      if (name) {
                         rows.push(`"${name}","${s.title}"`);
                       }
                     }
