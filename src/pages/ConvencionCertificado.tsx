@@ -7,7 +7,54 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { applySeo } from "@/lib/seo";
-import { namesAreSimilar, normalizeName } from "@/lib/nameMatch";
+import { levenshtein } from "@/lib/nameMatch";
+
+interface CertEntry {
+  name: string;
+  title: string;
+  file: string;
+}
+
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function isNameMatch(search: string, entryName: string): boolean {
+  const s = normalize(search);
+  const e = normalize(entryName);
+
+  // Exact match
+  if (s === e) return true;
+
+  // All search words appear in entry name (partial match)
+  const sWords = s.split(" ").filter(Boolean);
+  const eWords = e.split(" ").filter(Boolean);
+  if (sWords.length > 0 && sWords.every((sw) => eWords.some((ew) => ew === sw || ew.startsWith(sw) || sw.startsWith(ew)))) {
+    return true;
+  }
+
+  // Whole-name Levenshtein (generous ≤40%)
+  const maxLen = Math.max(s.length, e.length);
+  if (maxLen > 0 && levenshtein(s, e) / maxLen <= 0.4) return true;
+
+  // Per-word Levenshtein (≥ half of search words match within 30%)
+  let wordMatches = 0;
+  for (const sw of sWords) {
+    for (const ew of eWords) {
+      const maxW = Math.max(sw.length, ew.length);
+      if (maxW > 0 && levenshtein(sw, ew) / maxW <= 0.3) {
+        wordMatches++;
+        break;
+      }
+    }
+  }
+  return sWords.length > 0 && wordMatches >= Math.ceil(sWords.length / 2);
+}
 
 interface CertEntry {
   name: string;
@@ -57,20 +104,24 @@ const ConvencionCertificado: React.FC = () => {
     setErrorMsg(null);
 
     setTimeout(() => {
-      const norm = normalizeName(trimmed);
-
-      let matched = entries.filter((e) => normalizeName(e.name) === norm);
-
-      if (matched.length === 0) {
-        matched = entries.filter((e) => namesAreSimilar(e.name, trimmed));
-      }
+      const matched = entries.filter((e) => isNameMatch(trimmed, e.name));
 
       if (matched.length > 0) {
         setResults(matched);
       } else {
+        const norm = normalize(trimmed);
         const close = [...new Set(entries
           .map((e) => e.name)
-          .filter((n) => namesAreSimilar(n, trimmed))
+          .filter((n) => {
+            const nn = normalize(n);
+            if (nn === norm) return false;
+            const sWords = norm.split(" ").filter(Boolean);
+            const eWords = nn.split(" ").filter(Boolean);
+            const allWordsMatch = sWords.every((sw) => eWords.some((ew) => ew.startsWith(sw) || sw.startsWith(ew)));
+            if (allWordsMatch) return true;
+            const maxLen = Math.max(norm.length, nn.length);
+            return maxLen > 0 && levenshtein(norm, nn) / maxLen <= 0.5;
+          })
         )].slice(0, 5);
         setSuggestions(close);
       }
@@ -85,13 +136,11 @@ const ConvencionCertificado: React.FC = () => {
     [handleSearch],
   );
 
-  const searchExact = useCallback(
+  const handleSuggestion = useCallback(
     (name: string) => {
-      const norm = normalizeName(name);
-      const matched = entries.filter((e) => normalizeName(e.name) === norm);
-      return matched.length > 0
-        ? matched
-        : entries.filter((e) => namesAreSimilar(e.name, name));
+      setSearchValue(name);
+      setResults(entries.filter((e) => e.name === name || isNameMatch(name, e.name)));
+      setSuggestions([]);
     },
     [entries],
   );
@@ -185,11 +234,7 @@ const ConvencionCertificado: React.FC = () => {
                     key={s}
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setSearchValue(s);
-                      setResults(searchExact(s));
-                      setSuggestions([]);
-                    }}
+                    onClick={() => handleSuggestion(s)}
                   >
                     {s}
                   </Button>
