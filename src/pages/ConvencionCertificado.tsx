@@ -38,22 +38,11 @@ function isNameMatch(search: string, entryName: string): boolean {
     return true;
   }
 
-  // Whole-name Levenshtein (generous ≤40%)
+  // Whole-name Levenshtein (≤40%)
   const maxLen = Math.max(s.length, e.length);
   if (maxLen > 0 && levenshtein(s, e) / maxLen <= 0.4) return true;
 
-  // Per-word Levenshtein (≥ half of search words match within 30%)
-  let wordMatches = 0;
-  for (const sw of sWords) {
-    for (const ew of eWords) {
-      const maxW = Math.max(sw.length, ew.length);
-      if (maxW > 0 && levenshtein(sw, ew) / maxW <= 0.3) {
-        wordMatches++;
-        break;
-      }
-    }
-  }
-  return sWords.length > 0 && wordMatches >= Math.ceil(sWords.length / 2);
+  return false;
 }
 
 interface CertEntry {
