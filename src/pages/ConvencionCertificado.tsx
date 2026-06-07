@@ -31,16 +31,22 @@ function isNameMatch(search: string, entryName: string): boolean {
   // Exact match
   if (s === e) return true;
 
-  // All search words appear in entry name (partial match)
   const sWords = s.split(" ").filter(Boolean);
   const eWords = e.split(" ").filter(Boolean);
+
+  // All search words appear in entry name (partial match)
   if (sWords.length > 0 && sWords.every((sw) => eWords.some((ew) => ew === sw || ew.startsWith(sw) || sw.startsWith(ew)))) {
     return true;
   }
 
-  // Whole-name Levenshtein (≤40%)
-  const maxLen = Math.max(s.length, e.length);
-  if (maxLen > 0 && levenshtein(s, e) / maxLen <= 0.4) return true;
+  // Whole-name Levenshtein fallback only if first word is similar enough (avoids false matches between different names)
+  if (sWords.length > 0 && eWords.length > 0) {
+    const firstOk = levenshtein(sWords[0], eWords[0]) / Math.max(sWords[0].length, eWords[0].length) <= 0.25;
+    if (firstOk) {
+      const maxLen = Math.max(s.length, e.length);
+      if (maxLen > 0 && levenshtein(s, e) / maxLen <= 0.25) return true;
+    }
+  }
 
   return false;
 }
@@ -108,8 +114,11 @@ const ConvencionCertificado: React.FC = () => {
             const eWords = nn.split(" ").filter(Boolean);
             const allWordsMatch = sWords.every((sw) => eWords.some((ew) => ew.startsWith(sw) || sw.startsWith(ew)));
             if (allWordsMatch) return true;
-            const maxLen = Math.max(norm.length, nn.length);
-            return maxLen > 0 && levenshtein(norm, nn) / maxLen <= 0.5;
+            const firstOk = sWords.length > 0 && eWords.length > 0 && levenshtein(sWords[0], eWords[0]) / Math.max(sWords[0].length, eWords[0].length) <= 0.25;
+            if (firstOk) {
+              const maxLen = Math.max(norm.length, nn.length);
+              if (maxLen > 0 && levenshtein(norm, nn) / maxLen <= 0.3) return true;
+            }
           })
         )].slice(0, 5);
         setSuggestions(close);
