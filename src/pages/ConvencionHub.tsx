@@ -5,6 +5,7 @@ import { applySeo } from "@/lib/seo";
 import {
   BookOpen,
   Calendar,
+  Download,
   GraduationCap,
   Info,
   MessageCircle,
@@ -15,7 +16,7 @@ import {
   ClipboardList,
   ChevronRight,
   ExternalLink,
-  Lock,
+  CheckCircle2,
 } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { CONVENTION_ACTIVE } from "@/lib/convencionConfig";
 import {
   CONVENCION_COMMISSIONS,
   importantRules,
@@ -146,6 +148,15 @@ const ConvencionHub: React.FC = () => {
             </motion.div>
           </div>
         </section>
+
+        {!CONVENTION_ACTIVE && (
+          <Alert className="mx-auto mt-4 max-w-3xl border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/20">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            <AlertDescription className="text-emerald-800 dark:text-emerald-200">
+              El evento ha finalizado. Los certificados digitales ya están disponibles.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="container max-w-5xl space-y-16 py-12 md:py-16 lg:space-y-20 lg:py-20">
           {/* Información del evento */}
@@ -429,20 +440,26 @@ const ConvencionHub: React.FC = () => {
               </div>
             </div>
             <p className="mb-6 max-w-3xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Los participantes que hayan publicado al menos un resumen y comentado un mínimo de dos trabajos
+              Los participantes que hayan publicado al menos un resumen como autores
               podrán descargar su certificado digital de participación directamente desde la plataforma.
             </p>
-            <Card className="mb-6 border-border/60 bg-muted/20 shadow-sm">
-              <CardContent className="p-6 md:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-4 opacity-70">
-                <div className="rounded-full bg-muted p-3 text-muted-foreground shrink-0">
-                  <Lock className="h-6 w-6" />
+            <Card className="mb-6 border-emerald-500/40 bg-emerald-50/60 shadow-sm dark:bg-emerald-950/10">
+              <CardContent className="p-6 md:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="rounded-full bg-emerald-100 p-3 text-emerald-600 shrink-0 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <CheckCircle2 className="h-6 w-6" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground">Certificados no disponibles</p>
-                  <p className="text-sm text-muted-foreground">
-                    Estarán disponibles al finalizar el programa de la Convención.
+                  <p className="font-semibold text-emerald-800 dark:text-emerald-200">Certificados disponibles</p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-300">
+                    Ingresa tu nombre para descargar tu certificado digital.
                   </p>
                 </div>
+                <Button asChild className="shrink-0 gap-1.5">
+                  <Link to="/convencion/certificado">
+                    <Download className="h-4 w-4" />
+                    Descargar mi certificado
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
             <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border/80 bg-card shadow-lg ring-1 ring-primary/10">

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronLeft, BookOpen } from "lucide-react";
+import { ChevronLeft, BookOpen, Info } from "lucide-react";
 import Header from "@/components/Header";
 import { applySeo } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { SummaryForm } from "@/components/convencion/SummaryForm";
 import { SummaryCard, type SummaryRow } from "@/components/convencion/SummaryCard";
 import { getCommissionBySlug } from "@/data/convencionCommissions";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { CONVENTION_ACTIVE } from "@/lib/convencionConfig";
 
 const ConvencionComisionPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -119,10 +120,21 @@ const ConvencionComisionPage: React.FC = () => {
           </Alert>
         )}
 
-        <section className="mb-12 space-y-4">
-          <h2 className="font-serif text-lg font-semibold text-foreground">Nuevo resumen</h2>
-          <SummaryForm commissionSlug={commission.slug} commissionWhatsapp={commission.whatsapp} onSubmitted={loadSummaries} registeredNames={registeredNames} />
-        </section>
+        {CONVENTION_ACTIVE && (
+          <section className="mb-12 space-y-4">
+            <h2 className="font-serif text-lg font-semibold text-foreground">Nuevo resumen</h2>
+            <SummaryForm commissionSlug={commission.slug} commissionWhatsapp={commission.whatsapp} onSubmitted={loadSummaries} registeredNames={registeredNames} />
+          </section>
+        )}
+
+        {!CONVENTION_ACTIVE && (
+          <Alert className="mb-12 border-blue-500/40 bg-blue-50 dark:bg-blue-950/20">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-700 dark:text-blue-300">
+              La recepción de resúmenes y comentarios ha finalizado. Los certificados ya están disponibles.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <section className="space-y-4">
           <h2 className="font-serif text-lg font-semibold text-foreground">Resúmenes publicados</h2>

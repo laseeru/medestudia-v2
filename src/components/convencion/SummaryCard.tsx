@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { getSupabase } from "@/lib/supabase";
 import { namesAreSimilar, normalizeName } from "@/lib/nameMatch";
+import { CONVENTION_ACTIVE } from "@/lib/convencionConfig";
 
 const MIN_COMMENT = 10;
 const EDIT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -376,7 +377,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
             )}
 
             {/* Summary edit/delete buttons */}
-            {canEditSummary && !editingSummary && (
+            {CONVENTION_ACTIVE && canEditSummary && !editingSummary && (
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -450,7 +451,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
                       >
                         <div className="flex items-center justify-between gap-2">
                           <p className="font-medium text-foreground">{c.commenter_name}</p>
-                          {owned && !editingCommentId && (
+                          {CONVENTION_ACTIVE && owned && !editingCommentId && (
                             <div className="flex gap-1 shrink-0">
                               <button
                                 type="button"
@@ -543,44 +544,47 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary, registeredNam
             </div>
 
             {/* Comment form */}
-            <form onSubmit={handlePostComment} className="space-y-3 rounded-lg border border-dashed border-border/70 p-3">
-              <p className="text-xs font-medium text-foreground">
-                Añadir opinión
-                {claimedName && (
-                  <span className="ml-1 text-muted-foreground font-normal">
-                    (usuario: <span className="text-primary font-medium">{claimedName}</span>)
-                  </span>
-                )}
-              </p>
-              <div className="space-y-1.5">
-                <Label htmlFor={`cn-${summary.id}`} className="text-xs">
-                  Nombre
-                </Label>
-                <Input
-                  id={`cn-${summary.id}`}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Su nombre (para comentar y gestionar sus publicaciones)"
-                  maxLength={200}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={`ct-${summary.id}`} className="text-xs">
-                  Comentario
-                </Label>
-                <Textarea
-                  id={`ct-${summary.id}`}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Mínimo 10 caracteres"
-                  rows={3}
-                  className="resize-y min-h-[72px]"
-                />
-              </div>
-              <Button type="submit" size="sm" variant="secondary" disabled={posting}>
-                {posting ? "Publicando…" : "Publicar opinión"}
-              </Button>
-            </form>
+            {CONVENTION_ACTIVE && (
+              <form onSubmit={handlePostComment} className="space-y-3 rounded-lg border border-dashed border-border/70 p-3">
+                <p className="text-xs font-medium text-foreground">
+                  Añadir opinión
+                  {claimedName && (
+                    <span className="ml-1 text-muted-foreground font-normal">
+                      (usuario: <span className="text-primary font-medium">{claimedName}</span>)
+                    </span>
+                  )}
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`cn-${summary.id}`} className="text-xs">
+                    Su nombre
+                  </Label>
+                  <Input
+                    id={`cn-${summary.id}`}
+                    value={commentName}
+                    onChange={(e) => setCommentName(e.target.value)}
+                    placeholder="Su nombre completo (tal como aparece en el resumen)"
+                    disabled={posting}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`ct-${summary.id}`} className="text-xs">
+                    Opinión
+                  </Label>
+                  <Textarea
+                    id={`ct-${summary.id}`}
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Mínimo 10 caracteres"
+                    disabled={posting}
+                    className="min-h-[80px] resize-y text-sm"
+                  />
+                </div>
+                <Button type="submit" size="sm" variant="secondary" disabled={posting}>
+                  {posting ? "Publicando…" : "Publicar opinión"}
+                </Button>
+              </form>
+            )}
           </div>
         )}
       </CardContent>
