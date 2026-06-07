@@ -266,12 +266,12 @@ const ConvencionCertificado: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <a
-                    href={`/certs/${encodeURIComponent(r.file)}`}
-                    download={r.file}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                    <a
+                      href={`/certs/${encodeURIComponent(r.file)}`}
+                      download={`${r.name} - ${r.title}.pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                     <Button variant="outline" size="sm" className="gap-1.5">
                       <Download className="h-4 w-4" />
                       Descargar certificado (PDF)
