@@ -1,53 +1,27 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, FileDown, Search, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { ChevronLeft, Download, Search, XCircle, Loader2, FileText } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import CertificatePreview from "@/components/convencion/CertificatePreview";
 import { applySeo } from "@/lib/seo";
-import { getSupabase } from "@/lib/supabase";
 import { namesAreSimilar, normalizeName } from "@/lib/nameMatch";
 
-interface SummaryRow {
-  id: string;
-  commission_slug: string;
-  title: string;
-  authors: string;
-  institution: string;
-  summary: string;
-  created_at: string;
-}
-
-interface CommentRow {
-  id: string;
-  summary_id: string;
-  commenter_name: string;
-  comment: string;
-  created_at: string;
-}
-
-interface ParticipantResult {
+interface CertEntry {
   name: string;
-  summariesCount: number;
-  commentsCount: number;
-  qualifies: boolean;
-  institution: string | null;
-  summaries: { title: string; commission: string }[];
+  title: string;
+  file: string;
 }
 
 const ConvencionCertificado: React.FC = () => {
-  const certRef = useRef<HTMLDivElement>(null);
   const [searchValue, setSearchValue] = useState("");
-  const [result, setResult] = useState<ParticipantResult | null>(null);
+  const [results, setResults] = useState<CertEntry[] | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
-  const [summaries, setSummaries] = useState<SummaryRow[]>([]);
-  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [entries, setEntries] = useState<CertEntry[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,119 +35,48 @@ const ConvencionCertificado: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const sb = getSupabase();
-    if (!sb) {
-      setErrorMsg("No se pudo conectar con la base de datos.");
-      setLoading(false);
-      return;
-    }
-    Promise.all([
-      sb.from("summaries").select("*"),
-      sb.from("comments").select("*"),
-    ]).then(([sumRes, comRes]) => {
-      setLoading(false);
-      if (sumRes.error) setErrorMsg("Error al cargar datos.");
-      else setSummaries((sumRes.data as SummaryRow[]) ?? []);
-      if (comRes.error) setErrorMsg("Error al cargar datos.");
-      else setComments((comRes.data as CommentRow[]) ?? []);
-    });
+    fetch("/cert-mapping.json")
+      .then((r) => r.json())
+      .then((data) => {
+        setEntries(data as CertEntry[]);
+        setLoading(false);
+      })
+      .catch(() => {
+        setErrorMsg("Error al cargar los datos de certificados.");
+        setLoading(false);
+      });
   }, []);
 
-  const lookupParticipant = useCallback(
-    (name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) return null;
-
-      // Look for exact and fuzzy matches
-      const norm = normalizeName(trimmed);
-      let matchedVariants: string[] = [];
-
-      // Collect all unique raw names
-      const rawNames = new Set<string>();
-      for (const s of summaries) {
-        for (const n of s.authors.split(";").map((x) => x.trim()).filter(Boolean)) {
-          rawNames.add(n);
-        }
-      }
-      for (const c of comments) {
-        rawNames.add(c.commenter_name.trim());
-      }
-
-      // Exact match
-      const exact = [...rawNames].find((rn) => normalizeName(rn) === norm);
-      if (exact) matchedVariants = [exact];
-      else {
-        // Fuzzy match
-        const fuzzy = [...rawNames].filter((rn) => namesAreSimilar(rn, trimmed));
-        if (fuzzy.length > 0) matchedVariants = fuzzy;
-      }
-
-      if (matchedVariants.length === 0) return null;
-
-      // Aggregate data across all matched variants
-      let summariesCount = 0;
-      let commentsCount = 0;
-      let institution: string | null = null;
-      const summariesList: { title: string; commission: string }[] = [];
-
-      for (const s of summaries) {
-        const authors = s.authors.split(";").map((n) => n.trim()).filter(Boolean);
-        if (authors.some((a) => matchedVariants.includes(a))) {
-          summariesCount++;
-          summariesList.push({ title: s.title, commission: s.commission_slug });
-          if (s.institution && !institution) institution = s.institution;
-        }
-      }
-
-      for (const c of comments) {
-        if (matchedVariants.includes(c.commenter_name.trim())) {
-          commentsCount++;
-        }
-      }
-
-      return {
-        name: matchedVariants[0],
-        summariesCount,
-        commentsCount,
-        qualifies: summariesCount >= 1 && commentsCount >= 2,
-        institution,
-        summaries: summariesList,
-      };
-    },
-    [summaries, comments],
-  );
-
   const handleSearch = useCallback(() => {
+    const trimmed = searchValue.trim();
+    if (!trimmed) return;
+
     setChecking(true);
-    setResult(null);
+    setResults(null);
     setSuggestions([]);
     setErrorMsg(null);
 
-    // Small delay so user sees the spinner
     setTimeout(() => {
-      const found = lookupParticipant(searchValue);
-      if (found) {
-        setResult(found);
+      const norm = normalizeName(trimmed);
+
+      let matched = entries.filter((e) => normalizeName(e.name) === norm);
+
+      if (matched.length === 0) {
+        matched = entries.filter((e) => namesAreSimilar(e.name, trimmed));
+      }
+
+      if (matched.length > 0) {
+        setResults(matched);
       } else {
-        // Check for close suggestions
-        const norm = normalizeName(searchValue);
-        const rawNames = new Set<string>();
-        for (const s of summaries) {
-          for (const n of s.authors.split(";").map((x) => x.trim()).filter(Boolean)) {
-            rawNames.add(n);
-          }
-        }
-        for (const c of comments) {
-          rawNames.add(c.commenter_name.trim());
-        }
-        const close = [...rawNames]
-          .filter((rn) => namesAreSimilar(rn, searchValue))
-          .slice(0, 5);
+        const close = [...new Set(entries
+          .map((e) => e.name)
+          .filter((n) => namesAreSimilar(n, trimmed))
+        )].slice(0, 5);
         setSuggestions(close);
       }
       setChecking(false);
     }, 400);
-  }, [searchValue, lookupParticipant, summaries, comments]);
+  }, [searchValue, entries]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -182,29 +85,16 @@ const ConvencionCertificado: React.FC = () => {
     [handleSearch],
   );
 
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
-
-  const statCards = useMemo(() => {
-    if (!result) return null;
-    return (
-      <div className="flex flex-wrap justify-center gap-3 mb-6 print:hidden">
-        <Badge variant={result.summariesCount >= 1 ? "default" : "secondary"} className="text-sm px-3 py-1">
-          {result.summariesCount} {result.summariesCount === 1 ? "resumen" : "resúmenes"}
-        </Badge>
-        <Badge variant={result.commentsCount >= 2 ? "default" : "secondary"} className="text-sm px-3 py-1">
-          {result.commentsCount} {result.commentsCount === 1 ? "comentario" : "comentarios"}
-        </Badge>
-        <Badge
-          variant={result.qualifies ? "default" : "secondary"}
-          className={`text-sm px-3 py-1 ${result.qualifies ? "bg-emerald-500 hover:bg-emerald-500" : ""}`}
-        >
-          {result.qualifies ? "✓ Califica" : "No califica"}
-        </Badge>
-      </div>
-    );
-  }, [result]);
+  const searchExact = useCallback(
+    (name: string) => {
+      const norm = normalizeName(name);
+      const matched = entries.filter((e) => normalizeName(e.name) === norm);
+      return matched.length > 0
+        ? matched
+        : entries.filter((e) => namesAreSimilar(e.name, name));
+    },
+    [entries],
+  );
 
   if (loading) {
     return (
@@ -213,7 +103,7 @@ const ConvencionCertificado: React.FC = () => {
         <main className="flex-1 container max-w-xl py-12 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-sm text-muted-foreground">Cargando datos de participación…</p>
+            <p className="text-sm text-muted-foreground">Cargando datos de certificados…</p>
           </div>
         </main>
       </div>
@@ -236,7 +126,7 @@ const ConvencionCertificado: React.FC = () => {
             Certificado de Participación
           </h1>
           <p className="mt-2 text-muted-foreground max-w-md mx-auto">
-            Ingresa tu nombre completo para verificar y descargar tu certificado digital.
+            Ingresa tu nombre completo para descargar tu certificado digital.
           </p>
         </div>
 
@@ -245,7 +135,7 @@ const ConvencionCertificado: React.FC = () => {
           <CardHeader className="pb-3">
             <CardTitle className="font-serif text-lg">Buscar participante</CardTitle>
             <CardDescription>
-              Requisitos: haber publicado al menos 1 resumen y realizado al menos 2 comentarios.
+              Recibirás un certificado por cada resumen en el que figures como autor.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -271,14 +161,14 @@ const ConvencionCertificado: React.FC = () => {
         </Card>
 
         {/* Error message */}
-        {errorMsg && !result && (
+        {errorMsg && !results && (
           <Alert variant="destructive" className="max-w-lg mx-auto mb-8">
             <AlertDescription>{errorMsg}</AlertDescription>
           </Alert>
         )}
 
         {/* Suggestions */}
-        {suggestions.length > 0 && !result && (
+        {suggestions.length > 0 && !results && (
           <Card className="border-amber-500/40 shadow-sm max-w-lg mx-auto mb-8">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-amber-600">
@@ -297,13 +187,8 @@ const ConvencionCertificado: React.FC = () => {
                     size="sm"
                     onClick={() => {
                       setSearchValue(s);
-                      setChecking(true);
-                      setTimeout(() => {
-                        const found = lookupParticipant(s);
-                        setResult(found);
-                        setSuggestions([]);
-                        setChecking(false);
-                      }, 300);
+                      setResults(searchExact(s));
+                      setSuggestions([]);
                     }}
                   >
                     {s}
@@ -315,7 +200,7 @@ const ConvencionCertificado: React.FC = () => {
         )}
 
         {/* No match */}
-        {!result && suggestions.length === 0 && searchValue && !checking && (
+        {!results && suggestions.length === 0 && searchValue && !checking && (
           <Card className="border-dashed max-w-lg mx-auto mb-8">
             <CardHeader>
               <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -323,85 +208,61 @@ const ConvencionCertificado: React.FC = () => {
                 Sin resultados
               </CardTitle>
               <CardDescription>
-                No encontramos ningún participante con ese nombre. Verifica que el nombre ingresado coincida
-                con el que usaste al publicar tu resumen o comentario.
+                No encontramos ningún certificado con ese nombre. Verifica que el nombre coincida con el que usaste al publicar tu resumen.
               </CardDescription>
             </CardHeader>
           </Card>
         )}
 
-        {/* Found - not qualifying */}
-        {result && !result.qualifies && (
-          <Card className="border-amber-500/40 shadow-sm max-w-lg mx-auto mb-8">
-            <CardHeader className="pb-3">
-              <CardTitle className="font-serif text-lg flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-amber-500" />
-                No cumples los requisitos
-              </CardTitle>
-              <CardDescription>
-                Para obtener el certificado necesitas al menos 1 resumen publicado y 2 comentarios realizados.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {statCards}
-              <p className="text-sm text-muted-foreground">
-                Tu participación registrada: {result.summariesCount} resumen(es) y {result.commentsCount}{" "}
-                comentario(s). Sigue participando para completar los requisitos.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Found - qualifying */}
-        {result && result.qualifies && (
-          <>
-            {statCards}
-
-            {/* Download/print button (hidden when printing) */}
-            <div className="text-center mb-6 print:hidden">
-              <Button onClick={handlePrint} size="lg" className="gap-2">
-                <FileDown className="h-5 w-5" />
-                Guardar como PDF / Imprimir
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
-                Se abrirá el diálogo de impresión del navegador. Selecciona "Guardar como PDF" para
-                descargarlo.
-              </p>
-            </div>
-
-            {/* Certificate */}
-            <div className="flex justify-center">
-              <div className="overflow-x-auto" style={{ maxWidth: "100%" }}>
-                <CertificatePreview
-                  ref={certRef}
-                  participantName={result.name}
-                  summaryTitle={result.summaries[0]?.title}
-                  institution={result.institution ?? undefined}
-                  summariesCount={result.summariesCount}
-                  commentsCount={result.commentsCount}
-                />
-              </div>
-            </div>
-          </>
+        {/* Results */}
+        {results && results.length > 0 && (
+          <div className="max-w-2xl mx-auto space-y-4">
+            <h2 className="font-serif text-xl font-semibold text-center mb-2">
+              {results[0].name}
+            </h2>
+            <p className="text-sm text-muted-foreground text-center mb-4">
+              {results.length} {results.length === 1 ? "certificado disponible" : "certificados disponibles"}
+            </p>
+            {results.map((r, i) => (
+              <Card key={i} className="border-border/80 shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-start gap-2">
+                    <FileText className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                    <span>{r.title}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <a
+                    href={`/certs/${encodeURIComponent(r.file)}`}
+                    download={r.file}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <Download className="h-4 w-4" />
+                      Descargar certificado (PDF)
+                    </Button>
+                  </a>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
 
         {/* Info card */}
-        {!result && !searchValue && (
+        {!results && !searchValue && (
           <Card className="border-dashed max-w-lg mx-auto mt-8">
             <CardHeader>
               <CardTitle className="text-base font-medium flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
+                <Search className="h-5 w-5 text-primary" />
                 ¿Cómo funciona?
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>
-                1. Publica al menos un resumen en cualquiera de las comisiones.
-              </p>
-              <p>2. Realiza al menos dos comentarios en resúmenes de otros participantes.</p>
-              <p>3. Ingresa tu nombre aquí y descarga tu certificado digital.</p>
+              <p>1. Publica un resumen en cualquiera de las comisiones.</p>
+              <p>2. Ingresa tu nombre aquí y descarga tu certificado digital.</p>
               <p className="pt-2 text-xs">
-                El certificado se genera automáticamente con los datos registrados en la plataforma.
+                Recibirás un certificado por cada resumen en el que figures como autor.
               </p>
             </CardContent>
           </Card>
