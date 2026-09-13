@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Uso — MedEstudia</title>
+<style>
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    color: #1a1a1a;
+    line-height: 1.6;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 2cm;
+    margin: 0 auto;
+    background: #fff;
+  }
+
+  /* Cover */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 297mm;
+  }
+  .cover h1 {
+    font-size: 28pt;
+    margin-bottom: 8pt;
+    color: #1e3a5f;
+    letter-spacing: 1pt;
+  }
+  .cover .subtitle {
+    font-size: 16pt;
+    color: #4a5568;
+    margin-bottom: 40pt;
+  }
+  .cover .meta {
+    font-size: 12pt;
+    color: #4a5568;
+    line-height: 2;
+  }
+  .cover .meta strong {
+    color: #1a1a1a;
+  }
+  .cover .logo-img {
+    width: 100px;
+    height: auto;
+    margin-bottom: 24pt;
+  }
+  .cover .divider {
+    width: 80px;
+    height: 2px;
+    background: #1e3a5f;
+    margin: 20pt auto;
+  }
+
+  /* TOC */
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 18pt; margin-bottom: 20pt; border: none; padding: 0; }
+  .toc ul { list-style: none; }
+  .toc li {
+    margin-bottom: 6pt;
+    font-size: 12pt;
+  }
+  .toc a {
+    color: #1e3a5f;
+    text-decoration: none;
+  }
+  .toc a:hover { text-decoration: underline; }
+  .toc .toc-l1 { font-weight: bold; margin-top: 12pt; }
+  .toc .toc-l2 { padding-left: 24pt; }
+  .toc .toc-l3 { padding-left: 40pt; font-size: 11pt; }
+
+  /* Content */
+  h2 {
+    font-size: 18pt;
+    color: #1e3a5f;
+    border-bottom: 2px solid #1e3a5f;
+    padding-bottom: 4pt;
+    margin-top: 30pt;
+    margin-bottom: 16pt;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 14pt;
+    color: #2d4a7a;
+    margin-top: 24pt;
+    margin-bottom: 12pt;
+    page-break-after: avoid;
+  }
+
+  h4 {
+    font-size: 12pt;
+    color: #3b5e8a;
+    margin-top: 16pt;
+    margin-bottom: 8pt;
+  }
+
+  p {
+    margin-bottom: 10pt;
+    text-align: justify;
+    font-size: 12pt;
+  }
+
+  ul, ol {
+    margin-bottom: 10pt;
+    padding-left: 24pt;
+  }
+
+  li {
+    margin-bottom: 4pt;
+    font-size: 12pt;
+  }
+
+  strong {
+    color: #1a1a1a;
+  }
+
+  .note {
+    background: #f0f4fa;
+    border-left: 4px solid #1e3a5f;
+    padding: 12pt 16pt;
+    margin: 16pt 0;
+    border-radius: 2pt;
+  }
+
+  .note p { margin-bottom: 0; font-size: 11pt; }
+
+  .warning {
+    background: #fff8f0;
+    border-left: 4px solid #e67e22;
+    padding: 12pt 16pt;
+    margin: 16pt 0;
+    border-radius: 2pt;
+  }
+
+  .warning p { margin-bottom: 0; font-size: 11pt; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16pt 0;
+    font-size: 11pt;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e0;
+    padding: 8pt 10pt;
+    text-align: left;
+  }
+
+  th {
+    background: #1e3a5f;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  tr:nth-child(even) { background: #f7fafc; }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16pt;
+    margin: 16pt 0;
+  }
+
+  .feature-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 4pt;
+    padding: 14pt;
+    background: #fafbfc;
+  }
+
+  .feature-card h4 {
+    margin-top: 0;
+    color: #1e3a5f;
+  }
+
+  .feature-card p {
+    font-size: 11pt;
+    margin-bottom: 0;
+  }
+
+
+
+  @media print {
+    body { background: #fff; }
+    .page { padding: 0; width: 100%; min-height: auto; }
+    .cover { min-height: 100vh; }
+    h2, h3 { page-break-after: avoid; }
+    .feature-grid { page-break-inside: avoid; }
+    table { page-break-inside: avoid; }
+  }
+
+  @media screen {
+    body {
+      background: #e2e8f0;
+      padding: 20pt 0;
+    }
+  }
+
+  .footer-note {
+    margin-top: 30pt;
+    padding-top: 12pt;
+    border-top: 1px solid #cbd5e0;
+    font-size: 10pt;
+    color: #718096;
+    text-align: center;
+  }
+
+  .step-list {
+    list-style: none;
+    counter-reset: step;
+    padding-left: 0;
+  }
+  .step-list li {
+    counter-increment: step;
+    padding-left: 36pt;
+    position: relative;
+    margin-bottom: 12pt;
+  }
+  .step-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 24pt;
+    height: 24pt;
+    background: #1e3a5f;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10pt;
+    font-weight: bold;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #1e3a5f;
+    color: #fff;
+    padding: 2pt 8pt;
+    border-radius: 10pt;
+    font-size: 9pt;
+    font-weight: bold;
+  }
+
+  .version-table th:first-child { width: 15%; }
+  .version-table th:nth-child(2) { width: 15%; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="cover">
+    <img src="../src/assets/logo-medestudia.png" alt="MedEstudia Logo" class="logo-img">
+    <h1>MedEstudia</h1>
+    <p class="subtitle">Plataforma de Estudio Asistida por Inteligencia Artificial<br>para Estudiantes de Medicina</p>
+    <div class="divider"></div>
+    <p class="meta">
+      <strong>Versión:</strong> 1.0<br>
+      <strong>Fecha:</strong> Junio 2026<br>
+      <strong>Autor:</strong> Abdul-Rashid Dasana Abdulai<br>
+      <strong>Plataforma:</strong> Web (React / TypeScript)<br>
+      <strong>Idioma:</strong> Español / Inglés
+    </p>
+  </div>
+</div>
+
+<div class="page toc">
+  <h2>Índice</h2>
+  <ul>
+    <li class="toc-l1"><a href="#intro">1. Introducción</a></li>
+    <li class="toc-l2"><a href="#descripcion">1.1 Descripción General</a></li>
+    <li class="toc-l2"><a href="#objetivos">1.2 Objetivos</a></li>
+    <li class="toc-l2"><a href="#audiencia">1.3 Audiencia Destino</a></li>
+
+    <li class="toc-l1"><a href="#obra">2. Descripción de la Obra</a></li>
+
+    <li class="toc-l1"><a href="#originales">3. Elementos Originales de la Obra</a></li>
+    <li class="toc-l2"><a href="#original-pedagogico">3.1 Diseño Pedagógico de Razonamiento Guiado</a></li>
+    <li class="toc-l2"><a href="#original-dinamico">3.2 Generación Dinámica de Contenido</a></li>
+    <li class="toc-l2"><a href="#original-contexto">3.3 Contextualización Educativa para Cuba</a></li>
+    <li class="toc-l2"><a href="#original-arquitectura">3.4 Arquitectura de Aprendizaje Activo</a></li>
+
+    <li class="toc-l1"><a href="#innovaciones">4. Innovaciones Principales</a></li>
+
+    <li class="toc-l1"><a href="#requisitos">5. Requisitos Técnicos</a></li>
+    <li class="toc-l2"><a href="#req-hardware">5.1 Hardware</a></li>
+    <li class="toc-l2"><a href="#req-software">5.2 Software</a></li>
+    <li class="toc-l2"><a href="#req-conexion">5.3 Conexión a Internet</a></li>
+
+    <li class="toc-l1"><a href="#acceso">6. Acceso a la Plataforma</a></li>
+
+    <li class="toc-l1"><a href="#navegacion">7. Navegación General</a></li>
+    <li class="toc-l2"><a href="#header">7.1 Encabezado</a></li>
+    <li class="toc-l2"><a href="#idioma">7.2 Cambio de Idioma</a></li>
+    <li class="toc-l2"><a href="#ia-status">7.3 Indicador de Estado de la IA</a></li>
+    <li class="toc-l2"><a href="#footer">7.4 Pie de Página</a></li>
+
+    <li class="toc-l1"><a href="#inicio">8. Página de Inicio</a></li>
+
+    <li class="toc-l1"><a href="#preclinico">9. Estudio Preclínico</a></li>
+    <li class="toc-l2"><a href="#preclinico-asistente">9.1 Asistente Médico</a></li>
+    <li class="toc-l2"><a href="#preclinico-materias">9.2 Materias</a></li>
+    <li class="toc-l2"><a href="#herramientas">9.3 Herramientas de Estudio</a></li>
+    <li class="toc-l3"><a href="#tool-mcq">9.3.1 Practicar (MCQ)</a></li>
+    <li class="toc-l3"><a href="#tool-quiz">9.3.2 Evaluación Rápida (Quiz)</a></li>
+    <li class="toc-l3"><a href="#tool-explain">9.3.3 Estudiar (Explicador)</a></li>
+    <li class="toc-l3"><a href="#tool-stats">9.3.4 Progreso (Estadísticas)</a></li>
+
+    <li class="toc-l1"><a href="#clinico">10. Estudio Clínico</a></li>
+    <li class="toc-l2"><a href="#clinico-rotaciones">10.1 Rotaciones</a></li>
+    <li class="toc-l2"><a href="#clinico-sistemas">10.2 Sistemas</a></li>
+
+    <li class="toc-l1"><a href="#guias">11. Guías Clínicas</a></li>
+
+    <li class="toc-l1"><a href="#chat">12. Asistente de Chat IA</a></li>
+    <li class="toc-l2"><a href="#chat-preclinico">12.1 Modo Preclínico</a></li>
+    <li class="toc-l2"><a href="#chat-clinico">12.2 Modo Estudio Clínico</a></li>
+    <li class="toc-l2"><a href="#chat-guias">12.3 Modo Guías Clínicas</a></li>
+
+    <li class="toc-l1"><a href="#puntajes">13. Seguimiento de Puntuaciones</a></li>
+
+    <li class="toc-l1"><a href="#arquitectura">14. Arquitectura Técnica</a></li>
+    <li class="toc-l2"><a href="#stack">14.1 Stack Tecnológico</a></li>
+    <li class="toc-l2"><a href="#backend-ia">14.2 Infraestructura de IA</a></li>
+    <li class="toc-l2"><a href="#datos">14.3 Almacenamiento de Datos</a></li>
+
+    <li class="toc-l1"><a href="#versiones">15. Historial de Versiones</a></li>
+
+    <li class="toc-l1"><a href="#glosario">16. Glosario</a></li>
+
+    <li class="toc-l1"><a href="#creditos">17. Créditos y Contacto</a></li>
+  </ul>
+</div>
+
+<div class="page">
+  <h2 id="intro">1. Introducción</h2>
+
+  <h3 id="descripcion">1.1 Descripción General</h3>
+  <p><strong>MedEstudia</strong> es una plataforma web educativa diseñada para estudiantes de medicina en Cuba. Combina inteligencia artificial con un diseño pedagógico estructurado para facilitar el aprendizaje de ciencias básicas (preclínicas) y clínicas. La plataforma genera contenido dinámico y personalizado —preguntas de opción múltiple, evaluaciones rápidas, explicaciones estructuradas y conversaciones guiadas— adaptándose al nivel de conocimiento del estudiante.</p>
+
+  <p>El sistema utiliza un modelo de lenguaje de última generación como motor de inteligencia artificial, procesando las solicitudes en tiempo real para generar material de estudio contextualizado. La plataforma es completamente responsiva, funcionando en dispositivos móviles, tabletas y computadoras de escritorio.</p>
+
+  <h3 id="objetivos">1.2 Objetivos</h3>
+  <ul>
+    <li>Proporcionar una herramienta de estudio accesible y gratuita para estudiantes de medicina cubanos.</li>
+    <li>Ofrecer contenido educativo dinámico generado por IA, eliminando la dependencia de bancos de preguntas estáticos.</li>
+    <li>Implementar un enfoque pedagógico de aprendizaje activo mediante práctica, evaluación y explicación.</li>
+    <li>Adaptar el contenido al contexto cubano, incluyendo consideraciones para recursos limitados.</li>
+    <li>Funcionar en entornos con conectividad limitada, almacenando el progreso localmente en el navegador.</li>
+  </ul>
+
+  <h3 id="audiencia">1.3 Audiencia Destino</h3>
+  <p>Estudiantes de medicina de pregrado en Cuba, principalmente de 2do a 5to año. También es útil para estudiantes de enfermería, residentes y profesionales que deseen repasar conceptos médicos fundamentales. La plataforma está diseñada pensando en el plan de estudios de las universidades de ciencias médicas cubanas, pero es aplicable a cualquier currículo de medicina en español.</p>
+</div>
+
+<div class="page">
+  <h2 id="obra">2. Descripción de la Obra</h2>
+
+  <p>MedEstudia constituye una obra de software educativa concebida, diseñada y desarrollada en su totalidad por <strong>Abdul-Rashid Dasana Abdulai</strong>. Se trata de una plataforma web interactiva cuyo propósito fundamental es apoyar el aprendizaje de la medicina mediante la integración de inteligencia artificial generativa con principios de diseño instruccional.</p>
+
+  <p>La obra articula cuatro dimensiones interdisciplinarias: el <strong>desarrollo de software</strong>, materializado en una aplicación web moderna construida con React y TypeScript; el <strong>diseño educativo</strong>, reflejado en una arquitectura pedagógica estructurada en tres niveles progresivos de interacción; la <strong>interacción humano-computadora</strong>, evidenciada en una interfaz responsiva y accesible adaptada al contexto cubano; y la <strong>generación de contenido educativo mediante inteligencia artificial</strong>, que produce dinámicamente material de estudio personalizado sin depender de bancos de preguntas estáticos.</p>
+
+  <p>La plataforma incorpora un flujo de aprendizaje de razonamiento guiado —Reflexión → Pista → Explicación— que constituye una contribución metodológica original al campo de la educación médica asistida por tecnología. Este flujo pedagógico, implementado como un sistema conversacional de tres etapas, promueve el pensamiento crítico y la participación activa del estudiante antes de recibir retroalimentación directa.</p>
+
+  <p>El objetivo central de la obra es fortalecer el aprendizaje autónomo y el razonamiento clínico en estudiantes de medicina, particularmente en contextos de recursos limitados, ofreciendo una herramienta gratuita, accesible desde cualquier navegador web y adaptable al plan de estudios de las ciencias médicas cubanas.</p>
+</div>
+
+<div class="page">
+  <h2 id="originales">3. Elementos Originales de la Obra</h2>
+
+  <p>Los siguientes elementos constituyen las contribuciones intelectuales originales de MedEstudia y fundamentan su carácter de obra protegible ante el registro de propiedad intelectual:</p>
+
+  <h3 id="original-pedagogico">3.1 Diseño Pedagógico de Razonamiento Guiado</h3>
+  <p>La plataforma implementa un flujo pedagógico original de tres etapas —Reflexión, Pista y Explicación— que constituye el núcleo metodológico del asistente conversacional en modo preclínico. A diferencia de los sistemas tradicionales de pregunta-respuesta, MedEstudia activa el pensamiento crítico del estudiante solicitándole que reflexione y formule su propio razonamiento antes de recibir retroalimentación. Este diseño pedagógico, concebido específicamente para esta obra, promueve la retención del conocimiento y el desarrollo de habilidades metacognitivas en el estudiante.</p>
+
+  <figure style="margin: 16pt 0; text-align: center;">
+    <img src="Figura 1.png" alt="Figura 1" style="max-width:100%; height:auto; border:1px solid #cbd5e0; border-radius:4pt;">
+    <figcaption style="font-size:10pt; color:#64748b; margin-top:6pt; font-style:italic;">Figura 1. Flujo de aprendizaje guiado: Reflexión → Pista → Explicación</figcaption>
+  </figure>
+
+  <h3 id="original-dinamico">3.2 Generación Dinámica de Contenido</h3>
+  <p>A diferencia de las plataformas educativas convencionales que dependen de bancos de preguntas predefinidos y estáticos, MedEstudia genera cada material educativo —preguntas de opción múltiple, evaluaciones completas, explicaciones estructuradas y guías clínicas— en tiempo real mediante inteligencia artificial. Este enfoque permite una personalización absoluta del contenido según el tema, la dificultad seleccionada y el contexto educativo del estudiante, eliminando la obsolescencia del material y adaptándose dinámicamente a las necesidades individuales de aprendizaje.</p>
+
+  <h3 id="original-contexto">3.3 Contextualización Educativa para Cuba</h3>
+  <p>La plataforma ha sido diseñada específicamente para el contexto de la educación médica cubana, incorporando consideraciones para entornos con recursos limitados en las explicaciones generadas, terminología adaptada al plan de estudios nacional y un enfoque en las patologías y condiciones relevantes para la práctica médica en Cuba. Esta contextualización constituye un valor diferencial significativo frente a plataformas educativas internacionales no adaptadas a la realidad cubana.</p>
+
+  <h3 id="original-arquitectura">3.4 Arquitectura de Aprendizaje Activo</h3>
+  <p>MedEstudia integra en un entorno unificado cuatro modalidades de aprendizaje activo: la práctica mediante preguntas de opción múltiple (MCQ), la evaluación cronometrada (Quiz), el estudio mediante explicaciones estructuradas y la conversación guiada con el asistente de IA. Esta arquitectura pedagógica combinada, junto con el sistema de seguimiento de puntuaciones y progreso, permite al estudiante transitar fluidamente entre diferentes estrategias de aprendizaje dentro de un mismo ecosistema educativo coherente.</p>
+</div>
+
+<div class="page">
+  <h2 id="innovaciones">4. Innovaciones Principales</h2>
+
+  <p>MedEstudia introduce las siguientes innovaciones que la diferencian de las plataformas educativas convencionales:</p>
+
+  <h3>4.1 Aprendizaje Guiado mediante Inteligencia Artificial</h3>
+  <p>Mientras que la mayoría de las plataformas educativas ofrecen contenido estático o sistemas de tutoría basados en reglas predefinidas, MedEstudia implementa un flujo pedagógico dinámico donde la IA actúa como tutora que guía al estudiante a través de un proceso de reflexión activa antes de proporcionar la respuesta. Este enfoque supera el modelo tradicional de «pregunta-respuesta» al fomentar el pensamiento crítico y la elaboración activa del conocimiento.</p>
+
+  <h3>4.2 Integración de Contenidos Contextualizados</h3>
+  <p>La plataforma adapta explícitamente su contenido al contexto cubano, incluyendo consideraciones para la práctica médica en entornos con recursos limitados. Esta contextualización no se limita a la traducción del contenido, sino que impregna la generación misma del material educativo, priorizando patologías prevalentes y enfoques diagnósticos y terapéuticos relevantes para el sistema de salud cubano.</p>
+
+  <h3>4.3 Generación Dinámica de Recursos Educativos</h3>
+  <p>A diferencia de los recursos educativos tradicionales que requieren actualización manual periódica, MedEstudia genera dinámicamente cada pregunta, explicación o evaluación en el momento de la solicitud. Esto elimina la obsolescencia del contenido, permite una personalización infinita y garantiza que el material se mantenga actualizado con el conocimiento médico contemporáneo a través del modelo de lenguaje subyacente.</p>
+
+  <h3>4.4 Plataforma Bilingüe</h3>
+  <p>MedEstudia ofrece una interfaz completamente bilingüe (español e inglés), permitiendo a los estudiantes alternar entre ambos idiomas sin perder el contexto de navegación. Esta característica resulta particularmente valiosa para la preparación de exámenes internacionales y el acceso a literatura científica en inglés, manteniendo al mismo tiempo la accesibilidad en español para el estudio diario.</p>
+
+  <h3>4.5 Enfoque Centrado en Razonamiento Clínico</h3>
+  <p>A diferencia de las plataformas centradas exclusivamente en la memorización de datos, MedEstudia enfatiza el desarrollo del razonamiento clínico mediante la combinación de herramientas que abordan diferentes aspectos cognitivos: la práctica (MCQ) para la aplicación de conocimientos, la evaluación rápida (Quiz) para la síntesis bajo presión temporal, el explicador para la comprensión profunda, y el chat guiado para el desarrollo del pensamiento crítico.</p>
+</div>
+
+<div class="page">
+  <h2 id="requisitos">5. Requisitos Técnicos</h2>
+
+  <h3 id="req-hardware">5.1 Hardware</h3>
+  <table>
+    <tr><th>Componente</th><th>Mínimo</th><th>Recomendado</th></tr>
+    <tr><td>Pantalla</td><td>320px de ancho (móvil)</td><td>1024px+ (escritorio)</td></tr>
+    <tr><td>Memoria RAM</td><td>2 GB</td><td>4 GB+</td></tr>
+    <tr><td>Almacenamiento</td><td>50 MB libres</td><td>100 MB</td></tr>
+    <tr><td>Procesador</td><td>1.5 GHz</td><td>2.5 GHz+</td></tr>
+  </table>
+
+  <h3 id="req-software">5.2 Software</h3>
+  <table>
+    <tr><th>Requisito</th><th>Especificación</th></tr>
+    <tr><td>Navegador web</td><td>Chrome 90+, Firefox 90+, Safari 15+, Edge 90+</td></tr>
+    <tr><td>JavaScript</td><td>Habilitado (necesario para ejecutar la aplicación)</td></tr>
+    <tr><td>Sistema Operativo</td><td>Independiente (web)</td></tr>
+    <tr><td>Almacenamiento local</td><td>Navegador con soporte para localStorage (~5 MB)</td></tr>
+  </table>
+
+  <h3 id="req-conexion">5.3 Conexión a Internet</h3>
+  <p>Se requiere conexión a internet para:</p>
+  <ul>
+    <li><strong>Cargar la aplicación</strong> por primera vez (aprox. 2 MB de descarga inicial).</li>
+    <li><strong>Generar contenido de IA</strong> — todas las preguntas, explicaciones y respuestas del chat se generan en servidores externos.</li>
+  </ul>
+  <p>No se requiere conexión para:</p>
+  <ul>
+    <li>Ver el historial de evaluaciones guardadas (almacenadas localmente).</li>
+    <li>Navegar por la interfaz (una vez cargada, la aplicación funciona como aplicación de página única).</li>
+  </ul>
+  <div class="note">
+    <p><strong>Nota:</strong> La aplicación utiliza almacenamiento local del navegador para guardar preferencias de idioma, historial de evaluaciones y mensajes del chat. Estos datos permanecen en el dispositivo del usuario y no se transmiten a servidores externos, con excepción de las solicitudes de inteligencia artificial.</p>
+  </div>
+
+  <h2 id="acceso">6. Acceso a la Plataforma</h2>
+  <p>MedEstudia es una aplicación web alojada en infraestructura en la nube. No requiere instalación ni registro. Para acceder:</p>
+  <ol class="step-list">
+    <li>
+      <strong>Abrir un navegador web</strong> compatible (Chrome, Firefox, Safari o Edge).
+    </li>
+    <li>
+      <strong>Navegar a la dirección</strong> <code>https://medestudia-v2.vercel.app</code>
+    </li>
+    <li>
+      <strong>Esperar la carga inicial</strong> (unos segundos la primera vez). La página de inicio aparecerá con dos tarjetas principales: «Preclínico» y «Clínico».
+    </li>
+  </ol>
+  <div class="note">
+    <p><strong>Nota:</strong> La primera carga puede ser más lenta debido a la inicialización del servicio; las navegaciones posteriores serán más rápidas gracias al enrutamiento del lado del cliente.</p>
+  </div>
+
+  <figure style="margin: 16pt 0; text-align: center;">
+    <img src="Figura 2.png" alt="Figura 2" style="max-width:100%; height:auto; border:1px solid #cbd5e0; border-radius:4pt;">
+    <figcaption style="font-size:10pt; color:#64748b; margin-top:6pt; font-style:italic;">Figura 2. Página principal de MedEstudia</figcaption>
+  </figure>
+</div>
+
+<div class="page">
+  <h2 id="navegacion">7. Navegación General</h2>
+
+  <h3 id="header">7.1 Encabezado (Header)</h3>
+  <p>El encabezado se mantiene visible en todas las páginas e incluye:</p>
+  <ul>
+    <li><strong>Botón de retroceso</strong> (←) — regresa a la página anterior. Solo aparece en páginas internas (no en la página de inicio).</li>
+    <li><strong>Logotipo</strong> — al hacer clic, redirige a la página de inicio (<code>/</code>).</li>
+    <li><strong>Indicador de estado de la IA</strong> — círculo de color que muestra si el servicio de inteligencia artificial está disponible (ver sección 7.3).</li>
+    <li><strong>Selector de idioma</strong> — botón con un icono de globo que alterna entre español e inglés (ver sección 7.2).</li>
+  </ul>
+
+  <h3 id="idioma">7.2 Cambio de Idioma</h3>
+  <p>La plataforma es completamente bilingüe (español e inglés). Para cambiar el idioma:</p>
+  <ol>
+    <li>Hacer clic en el botón del <strong>globo</strong> en el encabezado.</li>
+    <li>La etiqueta muestra <strong>ES</strong> o <strong>EN</strong> según el idioma activo.</li>
+    <li>El cambio es inmediato y persiste incluso al recargar la página.</li>
+  </ol>
+  <p>El contenido generado por IA también se adapta al idioma seleccionado: las preguntas, explicaciones y respuestas del chat se generan en el idioma activo.</p>
+
+  <h3 id="ia-status">7.3 Indicador de Estado de la IA</h3>
+  <p>El indicador muestra el estado del servicio de inteligencia artificial:</p>
+  <table>
+    <tr><th>Color</th><th>Estado</th><th>Significado</th></tr>
+    <tr><td>🟢 Verde</td><td>Online</td><td>El servicio de IA está funcionando correctamente.</td></tr>
+    <tr><td>🟡 Amarillo</td><td>Limitado</td><td>Hubo un error reciente; el sistema reintentará.</td></tr>
+    <tr><td>🔴 Rojo</td><td>Offline</td><td>El servicio no está disponible. Las funciones que requieren IA no funcionarán.</td></tr>
+  </table>
+
+  <h3 id="footer">7.4 Pie de Página</h3>
+  <p>El pie de página contiene un aviso legal indicando que el contenido es educativo y representativo. La plataforma ha sido diseñada para permitir futuras integraciones documentales e institucionales. Incluye el copyright: «MedEstudia © 2026».</p>
+
+  <h2 id="inicio">8. Página de Inicio</h2>
+  <p>Al acceder a <code>/</code>, el usuario encuentra:</p>
+  <ul>
+    <li><strong>Sección hero</strong> — logotipo de MedEstudia, título y subtítulo («Medical Education for Cuba»).</li>
+    <li><strong>Dos tarjetas de acceso principales:</strong>
+      <ul>
+        <li><strong>Preclínico</strong> — acceso a las ciencias básicas.</li>
+        <li><strong>Clínico</strong> — acceso al estudio clínico y guías.</li>
+      </ul>
+    </li>
+  </ul>
+  <p>El usuario hace clic en la tarjeta deseada para comenzar a estudiar.</p>
+</div>
+
+<div class="page">
+  <h2 id="preclinico">9. Estudio Preclínico</h2>
+  <p>La sección preclínica (<code>/preclinico</code>) es el módulo principal de la aplicación. Cubre 10 materias de ciencias básicas y ofrece 4 herramientas de estudio impulsadas por IA, además de un asistente médico conversacional.</p>
+
+  <h3 id="preclinico-asistente">9.1 Asistente Médico</h3>
+  <p>En la parte superior de la página preclínica, el usuario encuentra una tarjeta destacada con el título «Asistente Médico».</p>
+  <ol class="step-list">
+    <li><strong>Escribir una pregunta</strong> médica en el campo de texto (ej. «¿Por qué la anemia causa fatiga?»).</li>
+    <li><strong>Hacer clic en «Enviar»</strong> o presionar Enter.</li>
+    <li>Se abre una <strong>ventana de chat a pantalla completa</strong> con el Asistente de IA.</li>
+    <li>El asistente sigue un <strong>flujo de aprendizaje guiado</strong> (ver sección 12.1).</li>
+  </ol>
+
+  <figure style="margin: 16pt 0; text-align: center;">
+    <img src="Figura 3.png" alt="Figura 3" style="max-width:100%; height:auto; border:1px solid #cbd5e0; border-radius:4pt;">
+    <figcaption style="font-size:10pt; color:#64748b; margin-top:6pt; font-style:italic;">Figura 3. Módulo Preclínico — Vista de materias y Asistente Médico</figcaption>
+  </figure>
+
+  <h3 id="preclinico-materias">9.2 Materias</h3>
+  <p>La plataforma incluye 10 materias preclínicas:</p>
+  <table>
+    <tr><th>Materia</th><th>Icono</th></tr>
+    <tr><td>Anatomía</td><td>🦴 Hueso</td></tr>
+    <tr><td>Histología y Embriología</td><td>🔬 Microscopio</td></tr>
+    <tr><td>Biología Celular y Molecular</td><td>🧬 ADN</td></tr>
+    <tr><td>Bioquímica</td><td>⚗️ Matraz</td></tr>
+    <tr><td>Fisiología</td><td>📊 Actividad</td></tr>
+    <tr><td>Microbiología</td><td>🦠 Bacteria</td></tr>
+    <tr><td>Parasitología</td><td>🪱 Gusano</td></tr>
+    <tr><td>Inmunología</td><td>🛡️ Escudo</td></tr>
+    <tr><td>Bioestadística / Metodología</td><td>📊 Gráfico</td></tr>
+    <tr><td>Farmacología</td><td>💊 Píldora</td></tr>
+  </table>
+  <p>Al hacer clic en una materia, se muestran las herramientas de estudio disponibles.</p>
+
+  <h3 id="herramientas">9.3 Herramientas de Estudio</h3>
+  <p>Una vez seleccionada una materia, el usuario puede elegir entre 4 herramientas de estudio:</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4 id="tool-mcq">🏋️ Practicar (MCQ)</h4>
+      <p>Genera una pregunta de opción múltiple sobre un tema específico dentro de la materia seleccionada. El usuario puede elegir la dificultad (Básica, Intermedia, Difícil). Al responder, recibe retroalimentación inmediata con una explicación detallada. Puede continuar generando nuevas preguntas del mismo tema.</p>
+    </div>
+    <div class="feature-card">
+      <h4 id="tool-quiz">📋 Evaluación Rápida</h4>
+      <p>Genera un examen corto de 5 preguntas sobre un tema. Incluye un temporizador, seguimiento de progreso y una pantalla de resultados al finalizar con puntuación, porcentaje y revisión pregunta por pregunta. Los resultados se guardan automáticamente en el historial.</p>
+    </div>
+    <div class="feature-card">
+      <h4 id="tool-explain">📖 Estudiar (Explicador)</h4>
+      <p>Genera una explicación estructurada de un tema médico. La respuesta incluye definición, características principales, enfoque diagnóstico (en modo clínico) y consideraciones para recursos limitados, relevantes para el contexto cubano.</p>
+    </div>
+    <div class="feature-card">
+      <h4 id="tool-stats">📈 Progreso (Estadísticas)</h4>
+      <p>Muestra el historial de evaluaciones realizadas, incluyendo número total de exámenes, precisión general (%) y puntuación promedio. También muestra los últimos 10 resultados con detalles de materia, dificultad y fecha. Incluye opción para borrar el historial.</p>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <h3>9.3 Herramientas de Estudio — Detalle de Uso</h3>
+
+  <h4>Practicar (MCQ) — Flujo de uso</h4>
+  <ol class="step-list">
+    <li><strong>Ingresar un tema</strong> en el campo de texto (ej. «Plexo braquial»).</li>
+    <li><strong>Seleccionar la dificultad</strong> (Básica / Intermedia / Difícil).</li>
+    <li><strong>Hacer clic en «Comenzar práctica»</strong>.</li>
+    <li>La IA genera una pregunta con 4 opciones. <strong>Seleccionar una respuesta</strong> haciendo clic.</li>
+    <li>La respuesta se marca como correcta (🟢) o incorrecta (🔴). Aparece una <strong>explicación</strong>.</li>
+    <li>Hacer clic en <strong>«Siguiente pregunta»</strong> para continuar practicando.</li>
+  </ol>
+
+  <h4>Evaluación Rápida (Quiz) — Flujo de uso</h4>
+  <ol class="step-list">
+    <li><strong>Ingresar un tema</strong> (ej. «Sistema cardiovascular»).</li>
+    <li><strong>Seleccionar la dificultad</strong>.</li>
+    <li>Hacer clic en <strong>«Comenzar»</strong>.</li>
+    <li>Responder cada pregunta seleccionando una opción. Después de cada respuesta, se muestra una <strong>explicación</strong>.</li>
+    <li>Al finalizar, se muestra la <strong>pantalla de resultados</strong> con puntuación, porcentaje y revisión de todas las preguntas.</li>
+    <li>Hacer clic en <strong>«Intentar de nuevo»</strong> para reiniciar.</li>
+  </ol>
+  <p><strong>Nota:</strong> Las preguntas ya vistas se almacenan localmente para evitar repeticiones. Si no se generan suficientes preguntas únicas, el sistema lo notificará y sugerirá cambiar de tema.</p>
+
+  <figure style="margin: 16pt 0; text-align: center;">
+    <img src="Figura 4.png" alt="Figura 4" style="max-width:100%; height:auto; border:1px solid #cbd5e0; border-radius:4pt;">
+    <figcaption style="font-size:10pt; color:#64748b; margin-top:6pt; font-style:italic;">Figura 4. Evaluación Rápida — Pantalla de preguntas con temporizador y progreso</figcaption>
+  </figure>
+
+  <h4>Estudiar (Explicador) — Flujo de uso</h4>
+  <ol class="step-list">
+    <li><strong>Ingresar un tema</strong> (ej. «Circulación pulmonar»).</li>
+    <li>Presionar Enter o hacer clic en el <strong>botón de búsqueda</strong> (🔍).</li>
+    <li>La IA genera una explicación estructurada con:
+      <ul>
+        <li><strong>Definición</strong> — descripción del concepto.</li>
+        <li><strong>Características clave</strong> — lista de puntos fundamentales.</li>
+        <li><strong>Enfoque diagnóstico</strong> (si aplica).</li>
+        <li><strong>Consideraciones para recursos limitados</strong> — adaptación al contexto cubano.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h4>Progreso (Estadísticas) — Uso</h4>
+  <p>Al seleccionar esta herramienta, se muestran automáticamente las estadísticas acumuladas. No requiere ninguna acción del usuario. Para borrar el historial, hacer clic en el botón de eliminar y confirmar la acción.</p>
+
+  <figure style="margin: 16pt 0; text-align: center;">
+    <img src="Figura 5.png" alt="Figura 5" style="max-width:100%; height:auto; border:1px solid #cbd5e0; border-radius:4pt;">
+    <figcaption style="font-size:10pt; color:#64748b; margin-top:6pt; font-style:italic;">Figura 5. Estadísticas de Progreso</figcaption>
+  </figure>
+</div>
+
+<div class="page">
+  <h2 id="clinico">10. Estudio Clínico</h2>
+  <p>La sección clínica (<code>/clinico/estudio</code>) permite a los estudiantes prepararse por rotación y sistema orgánico. Sigue una estructura de tres niveles similar a la preclínica, pero con una capa adicional de selección.</p>
+
+  <h3 id="clinico-rotaciones">10.1 Rotaciones</h3>
+  <p>El estudiante comienza seleccionando una rotación clínica. Hay 5 rotaciones disponibles:</p>
+  <table>
+    <tr><th>Rotación</th><th>Icono</th></tr>
+    <tr><td>Medicina Interna</td><td>❤️ Corazón</td></tr>
+    <tr><td>Cirugía</td><td>💉 Jeringa</td></tr>
+    <tr><td>Pediatría</td><td>👶 Bebé</td></tr>
+    <tr><td>Ginecología y Obstetricia</td><td>👥 Usuarios</td></tr>
+    <tr><td>Medicina General Integral</td><td>🩺 Estetoscopio</td></tr>
+  </table>
+
+  <h3 id="clinico-sistemas">10.2 Sistemas</h3>
+  <p>Después de seleccionar una rotación, el estudiante elige un sistema orgánico. Hay 6 sistemas:</p>
+  <table>
+    <tr><th>Sistema</th></tr>
+    <tr><td>Cardiovascular</td></tr>
+    <tr><td>Respiratorio</td></tr>
+    <tr><td>Endocrino</td></tr>
+    <tr><td>Gastrointestinal</td></tr>
+    <tr><td>Neurológico</td></tr>
+    <tr><td>Renal</td></tr>
+  </table>
+  <p>Una vez seleccionados rotación y sistema, se muestran las mismas 4 herramientas de estudio (Practicar, Evaluación Rápida, Estudiar, Progreso) descritas en la sección 9.3.</p>
+
+  <div class="note">
+    <p><strong>Diferencia clave:</strong> En el modo clínico, la herramienta «Estudiar (Explicador)» incluye una sección adicional de <strong>enfoque diagnóstico</strong>. Además, todas las respuestas del chat y explicaciones incluyen un aviso: «Modo educativo — caso hipotético para fines de aprendizaje».</p>
+  </div>
+
+  <h2 id="guias">11. Guías Clínicas</h2>
+  <p>La sección de guías clínicas (<code>/clinico/guias</code>) proporciona acceso a información estructurada basada en guías clínicas representativas.</p>
+
+  <ol class="step-list">
+    <li><strong>Leer el aviso legal</strong> que indica que la herramienta no sustituye el juicio profesional.</li>
+    <li>Hacer clic en <strong>«Entendido»</strong> para continuar.</li>
+    <li>Se abre el <strong>chat de guías clínicas</strong>. Escribir una consulta sobre una condición, procedimiento o protocolo.</li>
+    <li>La IA responde con una estructura organizada en <strong>pasos numerados</strong>, con detalles, advertencias relevantes y una nota sobre el contenido representativo.</li>
+  </ol>
+
+  <div class="warning">
+    <p><strong>Advertencia:</strong> El contenido de guías clínicas es representativo y educativo. La plataforma ha sido diseñada para permitir futuras integraciones documentales e institucionales. No debe utilizarse para la toma de decisiones clínicas reales.</p>
+  </div>
+
+  <figure style="margin: 16pt 0; text-align: center;">
+    <img src="Figura 6.png" alt="Figura 6" style="max-width:100%; height:auto; border:1px solid #cbd5e0; border-radius:4pt;">
+    <figcaption style="font-size:10pt; color:#64748b; margin-top:6pt; font-style:italic;">Figura 6. Guías Clínicas — Interfaz de consulta</figcaption>
+  </figure>
+</div>
+
+<div class="page">
+  <h2 id="chat">12. Asistente de Chat IA</h2>
+  <p>El Asistente de Chat es el componente más completo de la plataforma. Funciona en tres modos distintos, adaptando su comportamiento pedagógico al contexto de uso.</p>
+
+  <h3 id="chat-preclinico">12.1 Modo Preclínico — Aprendizaje Guiado</h3>
+  <p>Este modo implementa un flujo pedagógico de 3 pasos diseñado para fomentar el pensamiento activo antes de recibir la respuesta:</p>
+
+  <table>
+    <tr><th>Paso</th><th>Descripción</th><th>Interacción del usuario</th></tr>
+    <tr>
+      <td>1. Clasificación</td>
+      <td>El sistema clasifica la pregunta del usuario como: nueva pregunta, seguimiento, retroalimentación o no médica.</td>
+      <td>Automático (el usuario solo escribe su pregunta).</td>
+    </tr>
+    <tr>
+      <td>2. Reflexión (🧠)</td>
+      <td>Si es una pregunta nueva, la IA genera una pregunta guía para que el estudiante reflexione.</td>
+      <td>El estudiante escribe su razonamiento en un campo de texto y hace clic en «Continuar».</td>
+    </tr>
+    <tr>
+      <td>3. Pista (📌)</td>
+      <td>Basado en la reflexión del estudiante, la IA proporciona una pista orientadora.</td>
+      <td>El estudiante puede hacer clic en «Ver explicación completa» para revelar la respuesta final.</td>
+    </tr>
+    <tr>
+      <td>4. Explicación (📖)</td>
+      <td>Se muestra la explicación completa del concepto.</td>
+      <td>Visualización pasiva. El estudiante puede hacer una nueva pregunta.</td>
+    </tr>
+  </table>
+
+  <figure style="margin: 16pt 0; text-align: center;">
+    <img src="Figura 7.png" alt="Figura 7" style="max-width:100%; height:auto; border:1px solid #cbd5e0; border-radius:4pt;">
+    <figcaption style="font-size:10pt; color:#64748b; margin-top:6pt; font-style:italic;">Figura 7. Modo Guiado — Flujo Reflexión → Pista → Explicación</figcaption>
+  </figure>
+
+  <p><strong>Características adicionales del chat preclínico:</strong></p>
+  <ul>
+    <li><strong>Streaming de respuestas</strong> — las explicaciones se muestran en tiempo real mientras se generan.</li>
+    <li><strong>Persistencia de sesión</strong> — los mensajes se guardan localmente (últimos 20 mensajes).</li>
+    <li><strong>Nueva conversación</strong> — botón para reiniciar el chat con confirmación.</li>
+    <li><strong>Reintentar</strong> — si ocurre un error, aparece un botón para reenviar el último mensaje.</li>
+    <li><strong>Mensajes de bienvenida</strong> personalizados según el modo.</li>
+  </ul>
+
+  <h3 id="chat-clinico">12.2 Modo Estudio Clínico</h3>
+  <p>En este modo, el chat funciona como un asistente directo sin el flujo de reflexión guiada. El estudiante hace preguntas sobre razonamiento clínico, manifestaciones de enfermedades o enfoques diagnósticos, y la IA responde directamente. Cada respuesta incluye la nota: «Modo educativo — caso hipotético para fines de aprendizaje».</p>
+
+  <h3 id="chat-guias">12.3 Modo Guías Clínicas</h3>
+  <p>En este modo, las respuestas se estructuran automáticamente en pasos numerados con viñetas de detalles, advertencias y una nota final sobre el contenido representativo. El campo de entrada incluye ejemplos contextuales como «dengue», «crisis hipertensiva» o «protocolo de sepsis».</p>
+
+  <h2 id="puntajes">13. Seguimiento de Puntuaciones</h2>
+  <p>El sistema de seguimiento de puntuaciones funciona automáticamente en segundo plano. Cada vez que el usuario completa una Evaluación Rápida (Quiz), el resultado se guarda en el navegador.</p>
+
+  <p><strong>Datos almacenados por resultado:</strong></p>
+  <ul>
+    <li>Materia o rotación.</li>
+    <li>Puntuación (aciertos / total).</li>
+    <li>Dificultad seleccionada.</li>
+    <li>Fecha y hora.</li>
+    <li>Modo (preclínico o estudio clínico).</li>
+  </ul>
+
+  <p><strong>Cómo visualizar las estadísticas:</strong></p>
+  <ol>
+    <li>Seleccionar una materia (preclínico) o rotación+sistema (clínico).</li>
+    <li>En el selector de herramientas, elegir <strong>«Progreso»</strong> (📈).</li>
+    <li>Se muestran: total de evaluaciones, precisión general, puntuación promedio y los últimos 10 resultados.</li>
+  </ol>
+</div>
+
+<div class="page">
+  <h2 id="arquitectura">14. Arquitectura Técnica</h2>
+
+  <h3 id="stack">14.1 Stack Tecnológico</h3>
+  <table>
+    <tr><th>Capa</th><th>Tecnología</th><th>Función</th></tr>
+    <tr><td>Frontend</td><td>React 18 + TypeScript</td><td>Interfaz de usuario</td></tr>
+    <tr><td>Compilador</td><td>Vite 5</td><td>Construcción y desarrollo</td></tr>
+    <tr><td>Estilos</td><td>Tailwind CSS</td><td>Diseño responsivo</td></tr>
+    <tr><td>Enrutamiento</td><td>React Router v6</td><td>Navegación en aplicación de página única</td></tr>
+    <tr><td>Motor de IA</td><td>DeepSeek V3.1</td><td>Generación de lenguaje natural</td></tr>
+    <tr><td>Infraestructura</td><td>Vercel (Functions + Hosting)</td><td>Alojamiento y backend serverless</td></tr>
+    <tr><td>Animaciones</td><td>Framer Motion</td><td>Transiciones de interfaz</td></tr>
+    <tr><td>Iconos</td><td>Lucide React</td><td>Iconografía del sistema</td></tr>
+  </table>
+
+  <h3 id="backend-ia">14.2 Infraestructura de IA</h3>
+  <p>El backend de inteligencia artificial opera mediante una función serverless que actúa como intermediaria entre el frontend y el motor de lenguaje DeepSeek V3.1. La comunicación entre el frontend y la API se realiza mediante solicitudes HTTP POST con formato JSON, y las respuestas del chat utilizan transmisión en tiempo real (Server-Sent Events) para mostrar el contenido progresivamente.</p>
+
+  <p>El sistema implementa diferentes modos de interacción —generación de preguntas, explicaciones estructuradas, conversación guiada y consulta de guías— cada uno con instrucciones pedagógicas específicas que determinan el formato y la profundidad de las respuestas generadas por el modelo de lenguaje.</p>
+
+  <h3 id="datos">14.3 Almacenamiento de Datos</h3>
+  <p>La aplicación utiliza almacenamiento local del navegador para conservar las preferencias del usuario, el historial de evaluaciones, los mensajes del chat y las preguntas ya visualizadas. Estos datos son privados del usuario y no se transmiten a servidores externos. El sistema no requiere autenticación ni registro de usuarios para su funcionamiento.</p>
+</div>
+
+<div class="page">
+  <h2 id="versiones">15. Historial de Versiones</h2>
+
+  <table class="version-table">
+    <tr><th>Versión</th><th>Fecha</th><th>Descripción</th></tr>
+    <tr><td>1.0</td><td>Junio 2026</td><td>Primera versión registrada de MedEstudia. Incluye los módulos Preclínico (10 materias con 4 herramientas de estudio y asistente de IA con razonamiento guiado), Clínico (5 rotaciones, 6 sistemas), Guías Clínicas, y sistema de seguimiento de puntuaciones. Plataforma bilingüe español/inglés.</td></tr>
+  </table>
+
+  <h2 id="glosario">16. Glosario</h2>
+  <table>
+    <tr><th>Término</th><th>Definición</th></tr>
+    <tr><td>API</td><td><em>Application Programming Interface</em> — interfaz que permite la comunicación entre el frontend y el backend.</td></tr>
+    <tr><td>Backend</td><td>Servidor que procesa las solicitudes y se comunica con la IA.</td></tr>
+    <tr><td>CENDA</td><td>Centro Nacional de Derecho de Autor — institución cubana encargada del registro de obras.</td></tr>
+    <tr><td>DeepSeek</td><td>Modelo de lenguaje grande (LLM) utilizado como motor de inteligencia artificial.</td></tr>
+    <tr><td>Frontend</td><td>Interfaz de usuario que se ejecuta en el navegador.</td></tr>
+    <tr><td>IA</td><td>Inteligencia Artificial.</td></tr>
+    <tr><td>JSON</td><td><em>JavaScript Object Notation</em> — formato de intercambio de datos estructurados.</td></tr>
+    <tr><td>LLM</td><td><em>Large Language Model</em> — modelo de lenguaje grande entrenado con grandes volúmenes de texto.</td></tr>
+    <tr><td>localStorage</td><td>Sistema de almacenamiento en el navegador del usuario.</td></tr>
+    <tr><td>MCQ</td><td><em>Multiple Choice Question</em> — pregunta de opción múltiple.</td></tr>
+    <tr><td>RAG</td><td><em>Retrieval-Augmented Generation</em> — técnica que combina recuperación de información con generación de texto.</td></tr>
+    <tr><td>SPA</td><td><em>Single Page Application</em> — aplicación de página única.</td></tr>
+    <tr><td>Serverless</td><td>Modelo de computación en la nube donde el proveedor ejecuta el código bajo demanda.</td></tr>
+    <tr><td>SSE</td><td><em>Server-Sent Events</em> — tecnología para transmitir datos del servidor al cliente en tiempo real.</td></tr>
+  </table>
+
+  <h2 id="creditos">17. Créditos y Contacto</h2>
+
+  <p><strong>Autor y desarrollador principal:</strong> Abdul-Rashid Dasana Abdulai</p>
+  <p><strong>Tecnologías utilizadas:</strong></p>
+  <ul>
+    <li>React 18, TypeScript, Vite 5 — infraestructura del frontend.</li>
+    <li>Tailwind CSS — sistema de diseño responsivo.</li>
+    <li>DeepSeek V3.1 — motor de inteligencia artificial.</li>
+    <li>Vercel — plataforma de despliegue y funciones serverless.</li>
+    <li>Lucide React — librería de iconos.</li>
+    <li>Framer Motion — animaciones de interfaz.</li>
+  </ul>
+
+  <p><strong>Disponible en:</strong> <code>https://medestudia-v2.vercel.app</code></p>
+  <p><strong>Repositorio:</strong> <code>https://github.com/laseeru/medestudia-v2</code></p>
+
+  <div class="footer-note">
+    <p>MedEstudia © 2026 Abdul-Rashid Dasana Abdulai. Todos los derechos reservados.</p>
+    <p>Documento generado para registro en el Centro Nacional de Derecho de Autor (CENDA), Cuba.</p>
+  </div>
+</div>
+
+</body>
+</html>

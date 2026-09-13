@@ -31,8 +31,12 @@ const ConvencionComisionPage: React.FC = () => {
     });
   }, [commission, slug]);
 
-  // Load registered names for submission validation
+  // Registered names are only needed to validate a submission, and the
+  // submission form only renders while the convention is open. Fetching them
+  // otherwise exposed the full participant list to any visitor — the
+  // registrations table is no longer readable with the anon key at all.
   useEffect(() => {
+    if (!CONVENTION_ACTIVE) return;
     const sb = getSupabase();
     if (!sb || !isSupabaseConfigured()) return;
     sb.from("registrations")

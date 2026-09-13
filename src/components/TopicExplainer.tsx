@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, BookOpen, Lightbulb, Stethoscope, Globe, AlertCircle } from 'lucide-react';
+import { Search, BookOpen, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
 import { callAI, type ExplainResponse, isErrorResponse } from '@/lib/aiClient';
@@ -10,6 +10,12 @@ interface TopicExplainerProps {
   subject: string;
   mode: 'preclinical' | 'clinical-study';
   variant?: 'preclinical' | 'clinical';
+  /**
+   * Fired only after a valid explanation has actually rendered. Lets a quick
+   * session gate its Next button on real completion instead of inspecting the
+   * rendered output.
+   */
+  onExplanationLoaded?: () => void;
 }
 
 interface Explanation {
@@ -33,7 +39,23 @@ const placeholderExamples: Record<string, { es: string; en: string }> = {
   pediatrics: { es: 'Ej: desarrollo psicomotor, lactancia materna', en: 'E.g.: psychomotor development, breastfeeding' },
 };
 
-const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant = 'preclinical' }) => {
+/** Section heading inside generated content — a rule and a label, not a box. */
+const ContentSection: React.FC<{ title: string; children: React.ReactNode }> = ({
+  title,
+  children,
+}) => (
+  <section className="border-t border-border pt-4">
+    <h3 className="type-eyebrow mb-2">{title}</h3>
+    {children}
+  </section>
+);
+
+const TopicExplainer: React.FC<TopicExplainerProps> = ({
+  subject,
+  mode,
+  variant = 'preclinical',
+  onExplanationLoaded,
+}) => {
   const { t, language } = useLanguage();
   const { updateStatus } = useAIStatus();
   const [topic, setTopic] = useState('');
@@ -41,9 +63,11 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isPreclinical = variant === 'preclinical';
+
   // Get context-aware placeholder
   const getPlaceholder = () => {
-    const found = Object.entries(placeholderExamples).find(([k]) => 
+    const found = Object.entries(placeholderExamples).find(([k]) =>
       subject.toLowerCase().includes(k) || subject.toLowerCase().includes(t(k).toLowerCase())
     );
     return found ? found[1][language] : t('topicExamplePlaceholder');
@@ -51,13 +75,13 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
 
   const handleExplain = async () => {
     if (!topic.trim()) return;
-    
+
     setIsLoading(true);
     setError(null);
     setExplanation(null);
-    
+
     try {
-      const apiMode = mode === 'clinical-study' ? 'clinico_estudio' : 'preclinico';
+      const apiMode = mode === 'clinical-study' ? ('clinico_estudio' as const) : ('preclinico' as const);
       const request = {
         tool: 'explain' as const,
         mode: apiMode,
@@ -77,7 +101,7 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
       }
 
       const explain = response as ExplainResponse;
-      
+
       setExplanation({
         definition: explain.definition,
         keyFeatures: explain.keyFeatures || [],
@@ -87,6 +111,7 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
 
       updateStatus(true);
       setIsLoading(false);
+      onExplanationLoaded?.();
     } catch (err: any) {
       updateStatus(false);
       const errorMessage = err.message || (language === 'es'
@@ -97,127 +122,140 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({ subject, mode, variant 
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  // onKeyDown rather than the deprecated onKeyPress; same behaviour.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleExplain();
     }
   };
 
-  // Use academic blue for both variants
-  const colorClass = 'text-academic';
-  const bgClass = 'bg-academic/10';
-  const bulletClass = 'bg-academic';
-
   return (
-    <div className="space-y-6">
-      {/* Search Input */}
-      <div className="p-4 bg-card rounded-lg border border-border">
-        {error && (
-          <div className="mb-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-xs text-destructive font-medium">{error}</p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleExplain}
-                disabled={isLoading || !topic.trim()}
-                className="mt-2 text-xs"
-              >
-                {language === 'es' ? 'Reintentar' : 'Retry'}
-              </Button>
-            </div>
-          </div>
-        )}
-        <label className="block text-sm font-medium text-foreground mb-2">
+    <div>
+      {/* Query bar. Sits on the page rather than in a card: it is one field, and
+          boxing it made the search look like a section of study content. */}
+      <div>
+        <label htmlFor="topic-input" className="mb-1.5 block text-sm font-medium text-foreground">
           {t('enterTopic')}
         </label>
         <div className="flex gap-2">
           <input
+            id="topic-input"
             type="text"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder={getPlaceholder()}
             disabled={isLoading}
-            className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-11 flex-1 rounded-md border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground/70 disabled:opacity-60"
           />
-          <Button onClick={handleExplain} disabled={isLoading || !topic.trim()}>
-            <Search className={cn("h-4 w-4", isLoading && "animate-spin")} />
+          <Button
+            onClick={handleExplain}
+            disabled={isLoading || !topic.trim()}
+            className="h-11 shrink-0 px-4"
+          >
+            <Search className={cn('h-4 w-4', isLoading && 'animate-spin')} aria-hidden="true" />
+            <span className="sr-only">{t('enterTopic')}</span>
           </Button>
         </div>
       </div>
 
-      {/* Explanation Display */}
+      {error && (
+        <div
+          role="alert"
+          className="mt-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-foreground">{error}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleExplain}
+              disabled={isLoading || !topic.trim()}
+              className="mt-2"
+            >
+              {language === 'es' ? 'Reintentar' : 'Retry'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Generated explanation, laid out as a short article: a lead paragraph,
+          then labelled sections divided by rules. Long-form text reads badly
+          when every paragraph sits in its own bordered container. */}
       {explanation && (
-        <div className="space-y-4 animate-fade-in">
-          {/* Definition */}
-          <div className="p-4 bg-card rounded-lg border border-border">
-            <div className="flex items-center gap-2 mb-3">
-              <BookOpen className={cn("h-5 w-5", colorClass)} />
-              <h3 className="font-medium text-foreground">{t('definition')}</h3>
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{explanation.definition}</p>
+        <article className="measure mt-8 animate-fade-in">
+          <h2 className="type-page-title mb-3">{topic}</h2>
+
+          <p className="type-prose">{explanation.definition}</p>
+
+          <div className="mt-6 space-y-4">
+            {explanation.keyFeatures.length > 0 && (
+              <ContentSection title={t('keyFeatures')}>
+                <ul className="space-y-2">
+                  {explanation.keyFeatures.map((feature, idx) => (
+                    <li key={idx} className="flex gap-2.5 type-prose">
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'mt-[0.6em] h-1 w-1 shrink-0 rounded-full',
+                          isPreclinical ? 'bg-academic' : 'bg-medical',
+                        )}
+                      />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </ContentSection>
+            )}
+
+            {explanation.diagnosticOverview && (
+              <ContentSection title={t('diagnosticOverview')}>
+                <p className="type-prose">{explanation.diagnosticOverview}</p>
+              </ContentSection>
+            )}
+
+            {/* The one section that earns extra emphasis: what to do when the
+                equipment or drug in the textbook is not available. */}
+            {explanation.lowResourceConsiderations && (
+              <section className="border-t border-border pt-4">
+                <h3 className="type-eyebrow mb-2">{t('lowResourceConsiderations')}</h3>
+                <p
+                  className={cn(
+                    'type-prose border-l-2 pl-3',
+                    isPreclinical ? 'border-academic' : 'border-medical',
+                  )}
+                >
+                  {explanation.lowResourceConsiderations}
+                </p>
+              </section>
+            )}
           </div>
 
-          {/* Key Features */}
-          <div className="p-4 bg-card rounded-lg border border-border">
-            <div className="flex items-center gap-2 mb-3">
-              <Lightbulb className={cn("h-5 w-5", colorClass)} />
-              <h3 className="font-medium text-foreground">{t('keyFeatures')}</h3>
-            </div>
-            <ul className="space-y-2">
-              {explanation.keyFeatures.map((feature, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <span className={cn("mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0", bulletClass)} />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Diagnostic Overview (Clinical only) */}
-          {explanation.diagnosticOverview && (
-            <div className="p-4 bg-card rounded-lg border border-border">
-              <div className="flex items-center gap-2 mb-3">
-                <Stethoscope className={cn("h-5 w-5", colorClass)} />
-                <h3 className="font-medium text-foreground">{t('diagnosticOverview')}</h3>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">{explanation.diagnosticOverview}</p>
-            </div>
-          )}
-
-          {/* Low Resource Considerations */}
-          <div className={cn("p-4 rounded-lg border border-border", bgClass)}>
-            <div className="flex items-center gap-2 mb-3">
-              <Globe className={cn("h-5 w-5", colorClass)} />
-              <h3 className="font-medium text-foreground">{t('lowResourceConsiderations')}</h3>
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{explanation.lowResourceConsiderations}</p>
-          </div>
-
-          {/* Educational Disclaimer */}
-          <p className="text-xs text-center text-muted-foreground">
-            [{t('representativeContent')}]
+          <p className="mt-6 border-t border-border pt-3 text-xs text-muted-foreground">
+            {t('representativeContent')}
           </p>
+        </article>
+      )}
+
+      {!explanation && !isLoading && !error && (
+        <div className="mt-10 flex flex-col items-start gap-2 text-muted-foreground">
+          <BookOpen className="h-5 w-5 opacity-60" aria-hidden="true" />
+          <p className="measure text-sm">{t('enterTopicPrompt')}</p>
         </div>
       )}
 
-      {/* Empty State */}
-      {!explanation && !isLoading && (
-        <div className="text-center py-8 text-muted-foreground">
-          <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-40" />
-          <p className="text-sm">{t('enterTopicPrompt')}</p>
-        </div>
-      )}
-
-      {/* Loading State */}
       {isLoading && (
-        <div className="text-center py-8">
-          <div className="inline-flex items-center gap-2 text-muted-foreground">
-            <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm">{t('generating')}</span>
-          </div>
+        <div
+          role="status"
+          aria-live="polite"
+          className="mt-10 flex items-center gap-2 text-sm text-muted-foreground"
+        >
+          <span
+            aria-hidden="true"
+            className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+          />
+          {t('generating')}
         </div>
       )}
     </div>

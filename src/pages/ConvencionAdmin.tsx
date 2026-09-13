@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { CONVENCION_COMMISSIONS } from "@/data/convencionCommissions";
-import { getSupabase } from "@/lib/supabase";
+import { adminApi, login, hasToken, clearToken } from "@/lib/adminApi";
 import { levenshtein, namesAreSimilar } from "@/lib/nameMatch";
 
 interface SummaryRow {
@@ -62,31 +62,24 @@ interface RegistrationRow {
   registered_at: string;
 }
 
-const ADMIN_TOKEN_KEY = "medestudia_admin_auth";
-
 async function checkPassword(input: string): Promise<boolean> {
   try {
-    const res = await fetch("/api/admin-auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: input }),
-    });
-    return res.ok;
+    return await login(input);
   } catch {
     return false;
   }
 }
 
+/**
+ * Presence of a token, not proof of access — the server re-verifies its
+ * signature and expiry on every call, so a forged value only produces 401s.
+ */
 function isAuthenticated(): boolean {
-  return sessionStorage.getItem(ADMIN_TOKEN_KEY) === "true";
+  return hasToken();
 }
 
 function setAuthenticated(val: boolean): void {
-  if (val) {
-    sessionStorage.setItem(ADMIN_TOKEN_KEY, "true");
-  } else {
-    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-  }
+  if (!val) clearToken();
 }
 
 function getCommissionTitle(slug: string): string {
@@ -132,59 +125,41 @@ const ConvencionAdmin: React.FC = () => {
   const [expandedCertRow, setExpandedCertRow] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const sb = getSupabase();
-    if (!sb) {
-      toast.error("Supabase no está configurado.");
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-
-    const [sumRes, comRes, regRes] = await Promise.all([
-      sb.from("summaries").select("*").order("created_at", { ascending: false }),
-      sb.from("comments").select("*").order("created_at", { ascending: true }),
-      sb.from("registrations").select("*").order("registered_at", { ascending: false }),
-    ]);
-
-    setLoading(false);
-
-    if (sumRes.error) toast.error("Error al cargar resúmenes.");
-    else setSummaries((sumRes.data as SummaryRow[]) ?? []);
-
-    if (comRes.error) toast.error("Error al cargar comentarios.");
-    else setComments((comRes.data as CommentRow[]) ?? []);
-
-    if (regRes.error) {
-      setRegError(regRes.error.message);
-      setRegistrations([]);
-    } else {
+    try {
+      const data = await adminApi.load();
       setRegError(null);
-      setRegistrations((regRes.data as RegistrationRow[]) ?? []);
-    }
+      setSummaries((data.summaries as SummaryRow[]) ?? []);
+      setComments((data.comments as CommentRow[]) ?? []);
+      setRegistrations((data.registrations as RegistrationRow[]) ?? []);
 
-    // Load name merges from Supabase (with localStorage fallback migration)
-    if (sb) {
-      const { data: mergeRows } = await sb
-        .from("name_merges")
-        .select("alias, canonical");
-      if (mergeRows && mergeRows.length > 0) {
-        setNameMerges(new Map(mergeRows.map((r: { alias: string; canonical: string }) => [r.alias, r.canonical])));
+      const mergeRows = data.nameMerges ?? [];
+      if (mergeRows.length > 0) {
+        setNameMerges(new Map(mergeRows.map((r) => [r.alias, r.canonical])));
       } else {
-        // Migrate from localStorage if Supabase is empty
+        // One-off migration of merges that predate the Supabase table.
         const legacyRaw = localStorage.getItem("medestudia_name_merges");
         if (legacyRaw) {
           try {
-            const legacy = new Map(JSON.parse(legacyRaw));
+            const legacy = new Map<string, string>(JSON.parse(legacyRaw));
             if (legacy.size > 0) {
               setNameMerges(legacy);
-              // Push to Supabase
               const rows = [...legacy.entries()].map(([alias, canonical]) => ({ alias, canonical }));
-              const { error: migErr } = await sb.from("name_merges").upsert(rows, { onConflict: "alias" });
-              if (!migErr) localStorage.removeItem("medestudia_name_merges");
+              await adminApi.mergeUpsert(rows);
+              localStorage.removeItem("medestudia_name_merges");
             }
           } catch { /* ignore */ }
         }
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error al cargar los datos.";
+      setRegError(message);
+      setRegistrations([]);
+      toast.error(message);
+      // A rejected token means the session is gone; drop back to the login form.
+      if (!hasToken()) setAuthed(false);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -329,9 +304,11 @@ const ConvencionAdmin: React.FC = () => {
   }, [summaries, comments, nameMerges]);
 
   const handleMerge = useCallback(async (alias: string, canonical: string) => {
-    const sb = getSupabase();
-    if (sb) {
-      await sb.from("name_merges").upsert({ alias, canonical }, { onConflict: "alias" });
+    try {
+      await adminApi.mergeUpsert([{ alias, canonical }]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo guardar la fusión.");
+      return;
     }
     setNameMerges((prev) => {
       const next = new Map(prev);
@@ -342,9 +319,11 @@ const ConvencionAdmin: React.FC = () => {
   }, []);
 
   const handleUnmerge = useCallback(async (alias: string) => {
-    const sb = getSupabase();
-    if (sb) {
-      await sb.from("name_merges").delete().eq("alias", alias);
+    try {
+      await adminApi.mergeDelete(alias);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo revertir la fusión.");
+      return;
     }
     setNameMerges((prev) => {
       const next = new Map(prev);
@@ -355,9 +334,11 @@ const ConvencionAdmin: React.FC = () => {
   }, []);
 
   const handleClearAllMerges = useCallback(async () => {
-    const sb = getSupabase();
-    if (sb) {
-      await sb.from("name_merges").delete().neq("alias", "__nonexistent__");
+    try {
+      await adminApi.mergeClear();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudieron revertir las fusiones.");
+      return;
     }
     setNameMerges(new Map());
     toast.success("Todas las fusiones de nombres han sido revertidas.");
@@ -451,29 +432,24 @@ const ConvencionAdmin: React.FC = () => {
       toast.error("Nombre y comisión son obligatorios.");
       return;
     }
-    const sb = getSupabase();
-    if (!sb) return;
-
-    // Check for duplicate
-    const { data: existing } = await sb
-      .from("registrations")
-      .select("id, full_name, email")
-      .eq("full_name", newName.trim())
-      .eq("commission_slug", newCom)
-      .limit(1);
-    if (existing && existing.length > 0) {
+    // Duplicate check against the already-loaded rows — no extra round trip.
+    const duplicate = registrations.some(
+      (r) => r.full_name === newName.trim() && r.commission_slug === newCom,
+    );
+    if (duplicate) {
       toast.warning(`Ya existe un registro para "${newName.trim()}" en esta comisión. Se ha omitido.`);
       return;
     }
 
-    const { error } = await sb.from("registrations").insert({
-      full_name: newName.trim(),
-      email: newEmail.trim() || null,
-      commission_slug: newCom,
-      institution: newInst.trim() || null,
-    });
-    if (error) {
-      toast.error(error.message || "Error al añadir registro.");
+    try {
+      await adminApi.registrationInsert([{
+        full_name: newName.trim(),
+        email: newEmail.trim() || null,
+        commission_slug: newCom,
+        institution: newInst.trim() || null,
+      }]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al añadir registro.");
       return;
     }
     toast.success("Registro añadido.");
@@ -484,11 +460,10 @@ const ConvencionAdmin: React.FC = () => {
   };
 
   const deleteRegistration = async (id: string) => {
-    const sb = getSupabase();
-    if (!sb) return;
-    const { error } = await sb.from("registrations").delete().eq("id", id);
-    if (error) {
-      toast.error("Error al eliminar registro.");
+    try {
+      await adminApi.registrationDelete(id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al eliminar registro.");
       return;
     }
     toast.success("Registro eliminado.");
@@ -524,11 +499,13 @@ const ConvencionAdmin: React.FC = () => {
       return;
     }
 
-    const sb = getSupabase();
-    if (!sb) return;
-
-    let imported = 0;
-    let errors = 0;
+    // Build the batch first, deduping against what is already loaded and
+    // within the file itself, then send one insert instead of two round trips
+    // per row.
+    const existingKeys = new Set(
+      registrations.map((r) => `${r.full_name}|${r.commission_slug}`),
+    );
+    const rows: Array<Record<string, unknown>> = [];
     let skipped = 0;
 
     for (let i = 1; i < lines.length; i++) {
@@ -551,31 +528,35 @@ const ConvencionAdmin: React.FC = () => {
         if (match) comSlug = match.slug;
       }
 
-      // Skip duplicate
-      const { data: dup } = await sb
-        .from("registrations")
-        .select("id")
-        .eq("full_name", name)
-        .eq("commission_slug", comSlug)
-        .limit(1);
-      if (dup && dup.length > 0) {
+      const key = `${name}|${comSlug}`;
+      if (existingKeys.has(key)) {
         skipped++;
         continue;
       }
+      existingKeys.add(key);
 
-      const { error } = await sb.from("registrations").insert({
+      rows.push({
         full_name: name,
         email: email || null,
         commission_slug: comSlug,
         institution: inst || null,
       });
+    }
 
-      if (error) errors++;
-      else imported++;
+    if (rows.length === 0) {
+      toast.warning(`No hay registros nuevos.${skipped ? ` ${skipped} duplicados omitidos.` : ""}`);
+      return;
+    }
+
+    try {
+      await adminApi.registrationInsert(rows);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al importar registros.");
+      return;
     }
 
     toast.success(
-      `${imported} registros importados.${skipped ? ` ${skipped} duplicados omitidos.` : ""}${errors ? ` ${errors} errores.` : ""}`,
+      `${rows.length} registros importados.${skipped ? ` ${skipped} duplicados omitidos.` : ""}`,
     );
     setCsvText("");
     await loadData();

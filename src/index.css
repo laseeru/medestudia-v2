@@ -1,116 +1,180 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@400;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   MedEstudia design tokens
+
+   One primary (clinical green) and one secondary (academic blue). The
+   secondary carries *pathway identity* only — preclinical vs clinical — and is
+   never used as a generic accent, so colour keeps meaning instead of decorating.
+
+   Surfaces come in exactly three levels: page, raised (interactive/important)
+   and inset (passive grouping). Anything that needs a fourth level is a sign
+   the layout should use space or a rule instead of another box.
+   ========================================================================== */
+
 @layer base {
   :root {
-    /* Clinical green (primary accent — calm, medical) */
-    --medical-red: 158 58% 42%;
-    --medical-red-light: 156 50% 52%;
-    --medical-red-dark: 160 62% 30%;
-    
-    /* Academic Blue - from logo book */
-    --academic-blue: 210 100% 50%;
-    --academic-blue-light: 190 85% 55%;
-    --academic-blue-dark: 210 100% 35%;
-    
-    /* Dark mode only - Core semantic tokens */
-    --background: 220 25% 8%;
-    --foreground: 210 20% 95%;
+    /* -- Pathway identity ------------------------------------------------ */
+    /* Named for what they mean, not for a colour. The previous
+       --medical-red held green values, which made every usage a guess. */
+    --brand-clinical: 162 46% 44%;
+    --brand-clinical-strong: 162 50% 34%;
+    --brand-academic: 209 68% 56%;
+    --brand-academic-strong: 212 72% 44%;
 
-    --card: 220 25% 11%;
-    --card-foreground: 210 20% 95%;
+    /* -- Surfaces -------------------------------------------------------- */
+    --background: 220 24% 8%;
+    --foreground: 210 22% 96%;
 
-    --popover: 220 25% 11%;
-    --popover-foreground: 210 20% 95%;
+    --card: 220 22% 11%;
+    --card-foreground: 210 22% 96%;
 
-    --primary: 158 55% 46%;
-    --primary-foreground: 0 0% 100%;
+    --popover: 220 22% 12%;
+    --popover-foreground: 210 22% 96%;
 
-    --secondary: 210 100% 50%;
-    --secondary-foreground: 0 0% 100%;
+    /* Inset/passive grouping surface */
+    --muted: 220 18% 15%;
+    /* 66% lightness keeps secondary text near 7:1 on --background, so the
+       many muted paragraphs in study content stay comfortably readable. */
+    --muted-foreground: 214 14% 66%;
 
-    --muted: 220 20% 16%;
-    --muted-foreground: 210 15% 60%;
+    /* -- Interactive ----------------------------------------------------- */
+    --primary: 162 46% 44%;
+    --primary-foreground: 165 60% 8%;
 
-    --accent: 172 45% 42%;
-    --accent-foreground: 0 0% 100%;
+    --secondary: 209 68% 56%;
+    --secondary-foreground: 212 80% 10%;
 
-    --destructive: 0 62% 50%;
+    /* shadcn uses --accent for hover/active surfaces in menus and lists.
+       Kept neutral on purpose: a third hue here is what made the old palette
+       read as decorated rather than designed. */
+    --accent: 220 18% 17%;
+    --accent-foreground: 210 22% 96%;
+
+    /* -- Status ---------------------------------------------------------- */
+    --destructive: 358 62% 56%;
     --destructive-foreground: 0 0% 100%;
-
-    --success: 142 70% 45%;
+    --success: 152 52% 44%;
     --success-foreground: 0 0% 100%;
+    --warning: 38 78% 56%;
+    --warning-foreground: 40 60% 8%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 0%;
+    /* -- Lines and focus -------------------------------------------------- */
+    --border: 220 16% 20%;
+    --input: 220 16% 24%;
+    --ring: 162 60% 56%;
 
-    --border: 220 20% 18%;
-    --input: 220 20% 18%;
-    --ring: 158 55% 50%;
+    --radius: 0.625rem;
 
-    --radius: 0.75rem;
+    /* Two levels only. Elevation means "this floats above the page",
+       not "this is important". */
+    --shadow-soft: 0 1px 2px hsl(220 40% 2% / 0.4);
+    --shadow-card: 0 4px 12px -4px hsl(220 40% 2% / 0.5);
+    --shadow-elevated: 0 8px 24px -8px hsl(220 40% 2% / 0.55);
 
-    /* Custom gradients */
-    --gradient-medical: linear-gradient(135deg, hsl(var(--medical-red-light)) 0%, hsl(var(--medical-red-dark)) 100%);
-    --gradient-academic: linear-gradient(135deg, hsl(var(--academic-blue-light)) 0%, hsl(var(--academic-blue)) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(220 25% 8%) 0%, hsl(220 25% 6%) 100%);
-    
-    /* Shadows */
-    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
-    --shadow-card: 0 4px 16px -4px hsl(0 0% 0% / 0.4);
-    --shadow-elevated: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
-
-    /* Sidebar tokens */
-    --sidebar-background: 220 25% 10%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 158 55% 46%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 16%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 158 55% 50%;
+    /* Sidebar tokens (shadcn sidebar primitive) */
+    --sidebar-background: 220 22% 10%;
+    --sidebar-foreground: 210 22% 96%;
+    --sidebar-primary: 162 46% 44%;
+    --sidebar-primary-foreground: 165 60% 8%;
+    --sidebar-accent: 220 18% 17%;
+    --sidebar-accent-foreground: 210 22% 96%;
+    --sidebar-border: 220 16% 20%;
+    --sidebar-ring: 162 60% 56%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    /* Ring offsets must sit on the app background, not Tailwind's default
+       white, or every focus ring gets a white halo on this dark theme. */
+    --tw-ring-offset-color: hsl(var(--background));
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    /* System stack first so text paints immediately on a slow connection;
+       Inter upgrades it once the webfont arrives. */
+    text-rendering: optimizeLegibility;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Merriweather', Georgia, serif;
+    @apply font-serif;
+  }
+
+  /* Safety net: any control that forgets its own focus style still shows one.
+     Uses :focus-visible so it appears for keyboard users, not on mouse click. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: calc(var(--radius) - 4px);
+  }
+
+  /* Respect the OS "reduce motion" setting: keep state changes legible,
+     drop the movement. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ==========================================================================
+   Typography roles
+
+   Four roles, used everywhere, so a heading's size always signals the same
+   level of the hierarchy regardless of which screen it appears on.
+   ========================================================================== */
+
+@layer components {
+  /* Small uppercase label that introduces a group. Never a heading on its own. */
+  .type-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  /* One per screen. */
+  .type-page-title {
+    @apply font-serif text-xl font-bold leading-tight text-foreground sm:text-2xl;
+  }
+
+  /* Groups within a screen. */
+  .type-section-title {
+    @apply font-serif text-base font-semibold leading-snug text-foreground sm:text-lg;
+  }
+
+  /* Headings inside generated study content. */
+  .type-content-title {
+    @apply text-sm font-semibold tracking-tight text-foreground;
+  }
+
+  /* Long-form study text: generous leading, capped measure. */
+  .type-prose {
+    @apply text-[0.9375rem] leading-[1.7] text-foreground/85;
+  }
+
+  /* ~68 characters is the comfortable reading measure for continuous text. */
+  .measure {
+    max-width: 68ch;
   }
 }
 
 @layer utilities {
-  .gradient-medical {
-    background: var(--gradient-medical);
-  }
-  
-  .gradient-academic {
-    background: var(--gradient-academic);
-  }
-  
-  .gradient-hero {
-    background: var(--gradient-hero);
-  }
-  
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
-  
+
   .shadow-card {
     box-shadow: var(--shadow-card);
   }
-  
+
   .shadow-elevated {
     box-shadow: var(--shadow-elevated);
   }

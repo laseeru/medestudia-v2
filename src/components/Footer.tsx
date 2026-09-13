@@ -5,15 +5,13 @@ const Footer: React.FC = () => {
   const { t } = useLanguage();
 
   return (
-    <footer className="mt-auto border-t border-border bg-muted/30">
+    <footer className="mt-16 border-t border-border">
       <div className="container py-6">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-xs text-muted-foreground/70 max-w-2xl leading-relaxed">
+        <div className="measure space-y-2">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             {t('prototypeNotice')}
           </p>
-          <p className="text-sm text-muted-foreground">
-            MedEstudia © 2026
-          </p>
+          <p className="text-xs text-muted-foreground/70">MedEstudia © 2026</p>
         </div>
       </div>
     </footer>

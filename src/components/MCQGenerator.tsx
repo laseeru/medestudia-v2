@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useRecordAnswer } from '@/features/study-history/useStudyHistory';
 import { useAIStatus } from '@/contexts/AIStatusContext';
 import { callAI, type MCQResponse, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,7 @@ const placeholderExamples: Record<string, { es: string; en: string }> = {
 const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclinical', systemKey }) => {
   const { t, language } = useLanguage();
   const { updateStatus } = useAIStatus();
+  const recordAnswer = useRecordAnswer();
   const [topic, setTopic] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [question, setQuestion] = useState<MCQuestion | null>(null);
@@ -137,6 +139,23 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
     if (selectedAnswer !== null) return;
     setSelectedAnswer(index);
     setShowExplanation(true);
+
+    // MCQGenerator never wrote to medestudia_scores, so without this its
+    // questions would be invisible to the weekly summary.
+    if (question) {
+      recordAnswer({
+        correct: index === question.correctIndex,
+        pathway: variant === 'clinical' ? 'clinical' : 'preclinical',
+        subject,
+        sourceTool: 'mcq',
+        question: question.question,
+        options: question.options,
+        selectedAnswer: question.options[index],
+        correctAnswer: question.options[question.correctIndex],
+        explanation: question.explanation,
+        topic: topic.trim() || undefined,
+      });
+    }
   };
 
   // Use same academic blue for both variants
