@@ -15,6 +15,8 @@ import ConvencionHub from "./pages/ConvencionHub";
 import ConvencionComisionPage from "./pages/ConvencionComisionPage";
 import ConvencionAdmin from "./pages/ConvencionAdmin";
 import ConvencionCertificado from "./pages/ConvencionCertificado";
+import ErrorNotebookPage from "./pages/ErrorNotebookPage";
+import QuickSessionView from "./features/quick-session/QuickSessionView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
               <Route path="/clinico" element={<Clinical />} />
               <Route path="/clinico/estudio" element={<ClinicalStudy />} />
               <Route path="/clinico/guias" element={<ClinicalGuidelines />} />
+              <Route path="/errores" element={<ErrorNotebookPage />} />
+              <Route path="/sesion" element={<QuickSessionView />} />
               <Route path="/convencion" element={<ConvencionHub />} />
               <Route path="/convencion/comision/:slug" element={<ConvencionComisionPage />} />
               <Route path="/convencion/admin" element={<ConvencionAdmin />} />

@@ -133,6 +133,46 @@ const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
 const AI_REQUEST_TIMEOUT_MS = 18000;
 
+// ---------------------------------------------------------------- rate limit
+// This endpoint is unauthenticated and forwards to a metered LLM API, so
+// without a limit one script can run up the bill. State is per warm serverless
+// instance, so this is a speed bump rather than a hard quota — enough to stop
+// casual abuse. A shared store (Upstash/Redis) would be needed for a real cap.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 20; // per client per minute
+const RATE_LIMIT_MAX_TRACKED = 5000; // bound memory on a long-lived instance
+
+const rateBuckets = new Map<string, number[]>();
+
+function clientKey(req: VercelRequest): string {
+  const fwd = req.headers?.['x-forwarded-for'];
+  const ip = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim();
+  const session = typeof req.body?.session_id === 'string' ? req.body.session_id : '';
+  return ip || session || 'unknown';
+}
+
+/** Returns seconds to wait, or 0 when the request may proceed. */
+function rateLimit(req: VercelRequest): number {
+  const key = clientKey(req);
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+
+  const hits = (rateBuckets.get(key) ?? []).filter((t) => t > cutoff);
+  if (hits.length >= RATE_LIMIT_MAX_REQUESTS) {
+    return Math.max(1, Math.ceil((hits[0] + RATE_LIMIT_WINDOW_MS - now) / 1000));
+  }
+
+  hits.push(now);
+  rateBuckets.set(key, hits);
+
+  if (rateBuckets.size > RATE_LIMIT_MAX_TRACKED) {
+    for (const [k, times] of rateBuckets) {
+      if (times[times.length - 1] <= cutoff) rateBuckets.delete(k);
+    }
+  }
+  return 0;
+}
+
 type AIProvider = 'deepseek' | 'azure';
 
 function getProvider(): AIProvider {
@@ -526,6 +566,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ type: 'error', error: 'Method not allowed' });
+  }
+
+  const retryAfter = rateLimit(req);
+  if (retryAfter > 0) {
+    res.setHeader('Retry-After', String(retryAfter));
+    return res.status(429).json({
+      type: 'error',
+      error: `Demasiadas solicitudes. Espera ${retryAfter}s e inténtalo de nuevo.`,
+    });
   }
 
   // Validate request body

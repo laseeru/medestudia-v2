@@ -5,66 +5,81 @@ import { cn } from '@/lib/utils';
 interface PathwayCardProps {
   title: string;
   description: string;
+  cta: string;
   icon: React.ReactNode;
   variant: 'preclinical' | 'clinical';
   onClick: () => void;
 }
 
+/**
+ * Entry point to a study pathway.
+ *
+ * The previous version stacked five simultaneous hover effects — a blurred
+ * colour bloom, a translate, an elevated shadow, a gradient background and a
+ * scaling gradient icon chip — and stood 320px tall, so two of them filled a
+ * phone screen. Now the pathway colour appears once, as a tint on the icon and
+ * a rule down the leading edge, and hover changes only border and surface.
+ */
 const PathwayCard: React.FC<PathwayCardProps> = ({
   title,
   description,
+  cta,
   icon,
   variant,
   onClick,
 }) => {
+  const isPreclinical = variant === 'preclinical';
+
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col items-center justify-center p-8 md:p-12 rounded-2xl border-2 transition-all duration-300",
-        "hover:scale-[1.02] hover:shadow-elevated focus:outline-none focus:ring-2 focus:ring-offset-2",
-        "min-h-[280px] md:min-h-[320px] w-full",
-        variant === 'preclinical' && [
-          "border-academic/30 bg-gradient-to-br from-academic-light/5 to-academic/10",
-          "hover:border-academic hover:from-academic-light/10 hover:to-academic/20",
-          "focus:ring-academic"
-        ],
-        variant === 'clinical' && [
-          "border-medical/30 bg-gradient-to-br from-medical-light/5 to-medical/10",
-          "hover:border-medical hover:from-medical-light/10 hover:to-medical/20",
-          "focus:ring-medical"
-        ]
+        'group relative flex w-full items-start gap-4 overflow-hidden rounded-lg border border-border bg-card p-4 text-left',
+        'transition-colors duration-150 hover:bg-muted/50 sm:p-5',
+        isPreclinical ? 'hover:border-academic/60' : 'hover:border-medical/60',
       )}
     >
-      <div 
+      {/* Leading rule: the pathway's colour, carrying identity without tinting
+          the whole surface. */}
+      <span
+        aria-hidden="true"
         className={cn(
-          "flex h-20 w-20 items-center justify-center rounded-2xl mb-6 transition-transform duration-300 group-hover:scale-110",
-          variant === 'preclinical' && "gradient-academic text-white",
-          variant === 'clinical' && "gradient-medical text-white"
+          'absolute inset-y-0 left-0 w-1',
+          isPreclinical ? 'bg-academic' : 'bg-medical',
+        )}
+      />
+
+      <span
+        aria-hidden="true"
+        className={cn(
+          'ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md',
+          isPreclinical
+            ? 'bg-academic/12 text-academic'
+            : 'bg-medical/12 text-medical',
         )}
       >
         {icon}
-      </div>
-      
-      <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-3">
-        {title}
-      </h2>
-      
-      <p className="text-muted-foreground text-center max-w-xs mb-6">
-        {description}
-      </p>
-      
-      <div 
-        className={cn(
-          "flex items-center gap-1 text-sm font-medium transition-all duration-300",
-          "group-hover:gap-2",
-          variant === 'preclinical' && "text-academic",
-          variant === 'clinical' && "text-medical"
-        )}
-      >
-        <span>Comenzar</span>
-        <ChevronRight className="h-4 w-4" />
-      </div>
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="type-section-title block">{title}</span>
+        <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </span>
+        <span
+          className={cn(
+            'mt-3 inline-flex items-center gap-1 text-sm font-medium',
+            isPreclinical ? 'text-academic' : 'text-medical',
+          )}
+        >
+          {cta}
+          <ChevronRight
+            aria-hidden="true"
+            className="h-4 w-4 transition-transform duration-150 motion-safe:group-hover:translate-x-0.5"
+          />
+        </span>
+      </span>
     </button>
   );
 };

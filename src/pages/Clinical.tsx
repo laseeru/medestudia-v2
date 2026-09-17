@@ -4,6 +4,7 @@ import { GraduationCap, FileText } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PageHeader from '@/components/PageHeader';
 import PathwayCard from '@/components/PathwayCard';
 
 const Clinical: React.FC = () => {
@@ -13,32 +14,24 @@ const Clinical: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-      
-      <main className="flex-1 container py-8 md:py-12">
-        {/* Title */}
-        <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-2">
-            {t('clinical')}
-          </h1>
-          <p className="text-muted-foreground">
-            {t('clinicalDesc')}
-          </p>
-        </div>
 
-        {/* Mode Selection */}
-        <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
+      <main className="container flex-1 py-6 sm:py-8">
+        <PageHeader title={t('clinical')} description={t('clinicalDesc')} />
+
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           <PathwayCard
             title={t('clinicalStudy')}
             description={t('clinicalStudyDesc')}
-            icon={<GraduationCap className="h-10 w-10" />}
-            variant="preclinical"
+            cta={t('pathwayStart')}
+            icon={<GraduationCap className="h-5 w-5" />}
+            variant="clinical"
             onClick={() => navigate('/clinico/estudio')}
           />
-          
           <PathwayCard
             title={t('clinicalGuidelines')}
             description={t('clinicalGuidelinesDesc')}
-            icon={<FileText className="h-10 w-10" />}
+            cta={t('pathwayStart')}
+            icon={<FileText className="h-5 w-5" />}
             variant="clinical"
             onClick={() => navigate('/clinico/guias')}
           />

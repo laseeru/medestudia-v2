@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 
@@ -7,6 +7,14 @@ interface GuidelinesGateProps {
   onConfirm: () => void;
 }
 
+/**
+ * Consent step before the clinical-guidelines assistant.
+ *
+ * Reworked from a centred 400px-tall panel with a large circular warning badge
+ * into a plain, readable statement. A caveat a student must actually read is
+ * better served by comfortable measure and left-aligned text than by being
+ * centred under an icon.
+ */
 const GuidelinesGate: React.FC<GuidelinesGateProps> = ({ onConfirm }) => {
   const { t } = useLanguage();
   const [isConfirming, setIsConfirming] = useState(false);
@@ -19,31 +27,23 @@ const GuidelinesGate: React.FC<GuidelinesGateProps> = ({ onConfirm }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] p-8 animate-fade-in">
-      <div className="max-w-md text-center space-y-6">
-        <div className="flex justify-center">
-          <div className="h-16 w-16 rounded-full bg-warning/10 flex items-center justify-center">
-            <AlertCircle className="h-8 w-8 text-warning" />
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          <h2 className="text-xl font-serif font-bold text-foreground">
-            {t('clinicalGuidelines')}
-          </h2>
-          <p className="text-muted-foreground leading-relaxed">
+    <div className="measure rounded-lg border border-border bg-card p-5 animate-fade-in">
+      <div className="flex items-start gap-3">
+        <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+        <div className="min-w-0">
+          <h2 className="type-section-title">{t('beforeYouStart')}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {t('guidelinesDisclaimer')}
           </p>
         </div>
-
-        <Button
-          onClick={handleConfirm}
-          disabled={isConfirming}
-          className="w-full gradient-academic hover:opacity-90 transition-opacity"
-        >
-          {t('understand')}
-        </Button>
       </div>
+      <Button
+        onClick={handleConfirm}
+        disabled={isConfirming}
+        className="mt-4 h-11 w-full sm:w-auto"
+      >
+        {t('understand')}
+      </Button>
     </div>
   );
 };

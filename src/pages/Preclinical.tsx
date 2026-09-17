@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
-import { 
-  Bone, 
-  Microscope, 
-  Dna, 
-  FlaskConical, 
-  Activity, 
-  Bug, 
-  Worm, 
-  Shield, 
-  BarChart3, 
+import { useSearchParams } from 'react-router-dom';
+import {
+  Bone,
+  Microscope,
+  Dna,
+  FlaskConical,
+  Activity,
+  Bug,
+  Worm,
+  Shield,
+  BarChart3,
   Pill,
-  Stethoscope,
   Send,
-  Sparkles
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PageHeader from '@/components/PageHeader';
+import StudyTrail from '@/components/StudyTrail';
+import EducationalNote from '@/components/EducationalNote';
 import SubjectTile from '@/components/SubjectTile';
 import StudyToolSelector, { StudyTool } from '@/components/StudyToolSelector';
 import MCQGenerator from '@/components/MCQGenerator';
@@ -24,6 +26,8 @@ import QuickQuiz from '@/components/QuickQuiz';
 import TopicExplainer from '@/components/TopicExplainer';
 import ScoreStats from '@/components/ScoreStats';
 import ChatInterface from '@/components/ChatInterface';
+import { useRecordRecentStudy } from '@/features/study-history/useStudyHistory';
+import { buildStudyRoute } from '@/features/study-history/recentStudy';
 
 const PENDING_CHAT_QUESTION_KEY = 'medestudia_pending_preclinical_chat_question';
 
@@ -40,10 +44,28 @@ const preclinicalSubjects = [
   { key: 'pharmacology', icon: Pill },
 ];
 
+const SUBJECT_KEYS = new Set(preclinicalSubjects.map((s) => s.key));
+const TOOL_KEYS = new Set<StudyTool>(['mcq', 'quiz', 'explain', 'stats']);
+
 const Preclinical: React.FC = () => {
   const { t } = useLanguage();
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [selectedTool, setSelectedTool] = useState<StudyTool | null>(null);
+  const [searchParams] = useSearchParams();
+  const recordRecentStudy = useRecordRecentStudy();
+
+  // "Continue where you left off" returns here with the selection in the URL,
+  // so a bookmark or a shared link restores the same place and the browser
+  // back button still behaves normally.
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(() => {
+    const subject = searchParams.get('subject');
+    return subject && SUBJECT_KEYS.has(subject) ? subject : null;
+  });
+  const [selectedTool, setSelectedTool] = useState<StudyTool | null>(() => {
+    const subject = searchParams.get('subject');
+    const tool = searchParams.get('tool') as StudyTool | null;
+    // A tool without a subject would render a study screen with nothing to study.
+    if (!subject || !SUBJECT_KEYS.has(subject)) return null;
+    return tool && TOOL_KEYS.has(tool) ? tool : null;
+  });
   const [activeLearningTool, setActiveLearningTool] = useState<'assistant' | null>(null);
   const [assistantQuestion, setAssistantQuestion] = useState('');
   const [initialAssistantQuestion, setInitialAssistantQuestion] = useState('');
@@ -57,6 +79,19 @@ const Preclinical: React.FC = () => {
     } else {
       setSelectedSubject(null);
     }
+  };
+
+  /** Selecting a tool is the first moment the learner is actually studying. */
+  const handleSelectTool = (tool: StudyTool) => {
+    setSelectedTool(tool);
+    if (!selectedSubject) return;
+    recordRecentStudy({
+      pathway: 'preclinical',
+      subject: selectedSubject,
+      tool,
+      displayLabel: `${t('preclinical')} · ${t(selectedSubject)}`,
+      route: buildStudyRoute({ pathway: 'preclinical', subject: selectedSubject, tool }),
+    });
   };
 
   const handleAssistantSubmit = (e: React.FormEvent) => {
@@ -75,12 +110,18 @@ const Preclinical: React.FC = () => {
       setAssistantQuestion('');
     }
     setActiveLearningTool('assistant');
+    recordRecentStudy({
+      pathway: 'preclinical',
+      tool: 'chat',
+      displayLabel: `${t('preclinical')} · ${t('medicalAssistant')}`,
+      route: '/preclinico',
+    });
     setTimeout(() => setAssistantSubmitting(false), 200);
   };
 
   const renderStudyTool = () => {
     const subject = t(selectedSubject!);
-    
+
     switch (selectedTool) {
       case 'mcq':
         return <MCQGenerator subject={subject} variant="preclinical" />;
@@ -95,88 +136,69 @@ const Preclinical: React.FC = () => {
     }
   };
 
+  const isSelecting = !selectedSubject && !activeLearningTool;
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-      
-      <main className="flex-1 container py-8 md:py-12">
-        {/* Title */}
-        <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-2">
-            {t('preclinical')}
-          </h1>
-          <p className="text-muted-foreground">
-            {t('preclinicalDesc')}
-          </p>
-        </div>
 
-        {/* Educational Badge */}
-        <div className="max-w-3xl mx-auto mb-8 flex justify-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border text-xs text-muted-foreground">
-            {t('educationalUse')}
-          </span>
-        </div>
+      <main className="container flex-1 py-6 sm:py-8">
+        {isSelecting && (
+          <PageHeader
+            title={t('preclinical')}
+            description={t('preclinicalDesc')}
+            note={<EducationalNote />}
+          />
+        )}
 
-        {!selectedSubject && !activeLearningTool ? (
-          /* Study tools + Subject Grid */
-          <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
-            <section className="p-4 md:p-5 rounded-xl border border-academic/30 bg-academic/5">
-              <div className="mb-4 text-center md:text-left">
-                <h2 className="text-lg font-semibold text-foreground">{t('studyToolsSection')}</h2>
-                <p className="text-sm text-muted-foreground">{t('studyToolsSectionDesc')}</p>
-              </div>
-              <div className="rounded-2xl border border-academic/40 bg-card/70 shadow-[0_0_0_1px_rgba(59,130,246,0.15),0_0_30px_rgba(59,130,246,0.1)] p-5 md:p-6">
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-10 w-10 rounded-xl bg-academic/15 border border-academic/30 text-academic flex items-center justify-center">
-                      <Stethoscope className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base md:text-lg font-semibold text-foreground">{t('medicalAssistant')}</h3>
-                      <p className="text-xs md:text-sm text-muted-foreground">{t('medicalAssistantDesc')}</p>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border border-academic/30 bg-academic/10 text-academic">
-                    <Sparkles className="h-3 w-3" />
-                    IA
-                  </span>
+        {isSelecting ? (
+          <div className="space-y-8 animate-fade-in">
+            {/* Ask-anything entry point. One surface: this was a bordered
+                section wrapping a second bordered card wrapping the form. */}
+            <section aria-labelledby="asistente">
+              <h2 id="asistente" className="type-section-title">
+                {t('medicalAssistant')}
+              </h2>
+              <p className="measure mt-1 text-sm text-muted-foreground">
+                {t('medicalAssistantDesc')}
+              </p>
+
+              <form onSubmit={handleAssistantSubmit} className="mt-3">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={assistantQuestion}
+                    onChange={(e) => setAssistantQuestion(e.target.value)}
+                    placeholder={t('medicalAssistantInputPlaceholder')}
+                    aria-label={t('medicalAssistant')}
+                    className="h-11 w-full flex-1 rounded-md border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground/70"
+                  />
+                  <button
+                    type="submit"
+                    disabled={assistantSubmitting}
+                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                  >
+                    <Send className="h-4 w-4" aria-hidden="true" />
+                    {assistantSubmitting ? t('loading') : t('askAssistant')}
+                  </button>
                 </div>
-
-                <form onSubmit={handleAssistantSubmit} className="space-y-3">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
-                    <input
-                      type="text"
-                      value={assistantQuestion}
-                      onChange={(e) => setAssistantQuestion(e.target.value)}
-                      placeholder={t('medicalAssistantInputPlaceholder')}
-                      autoFocus
-                      className="w-full flex-1 min-h-11 rounded-lg border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    <button
-                      type="submit"
-                      className="inline-flex w-full md:w-auto items-center justify-center gap-2 rounded-lg bg-academic text-white px-4 min-h-11 py-3 text-sm font-medium hover:bg-academic/90 transition-colors disabled:opacity-70"
-                      disabled={assistantSubmitting}
-                    >
-                      <Send className="h-4 w-4" />
-                      {assistantSubmitting ? t('loading') : t('askAssistant')}
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground pt-1">{t('medicalAssistantExample')}</p>
-                </form>
-              </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {t('medicalAssistantExample')}
+                </p>
+              </form>
             </section>
 
-            <section>
-              <div className="mb-4 text-center md:text-left">
-                <h2 className="text-lg font-semibold text-foreground">{t('subjectsSection')}</h2>
-                <p className="text-sm text-muted-foreground">{t('subjectsSectionDesc')}</p>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <section aria-labelledby="asignaturas">
+              <h2 id="asignaturas" className="type-section-title">
+                {t('subjectsSection')}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">{t('subjectsSectionDesc')}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                 {preclinicalSubjects.map((subject) => (
                   <SubjectTile
                     key={subject.key}
                     title={t(subject.key)}
-                    icon={<subject.icon className="h-6 w-6" />}
+                    icon={<subject.icon className="h-4 w-4" />}
                     onClick={() => setSelectedSubject(subject.key)}
                     variant="preclinical"
                   />
@@ -185,83 +207,46 @@ const Preclinical: React.FC = () => {
             </section>
           </div>
         ) : activeLearningTool ? (
-          /* Global learning tool mode (not tied to a specific subject) */
-          <div className="w-full max-w-none mx-auto space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleBack}
-                className="text-sm text-academic hover:underline flex items-center gap-1"
-              >
-                ← {t('back')}
-              </button>
-              <span className="text-sm font-medium text-foreground">
-                {t('medicalAssistant')}
-              </span>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-0 md:p-0 overflow-hidden">
-                <ChatInterface
-                  mode="preclinical"
-                  initialQuestion={initialAssistantQuestion || (() => {
-                    let sessionQuestion = '';
-                    try {
-                      sessionQuestion = sessionStorage.getItem(PENDING_CHAT_QUESTION_KEY) || '';
-                    } catch {
-                      sessionQuestion = '';
-                    }
-                    return sessionQuestion;
-                  })()}
-                  onInitialQuestionUsed={() => {
-                    setInitialAssistantQuestion('');
-                    try {
-                      sessionStorage.removeItem(PENDING_CHAT_QUESTION_KEY);
-                    } catch {
-                      // Ignore sessionStorage errors
-                    }
-                  }}
-                  fullscreen
-                />
-            </div>
+          <div className="animate-fade-in">
+            <StudyTrail steps={[t('preclinical'), t('medicalAssistant')]} onBack={handleBack} />
+            <ChatInterface
+              mode="preclinical"
+              initialQuestion={initialAssistantQuestion || (() => {
+                let sessionQuestion = '';
+                try {
+                  sessionQuestion = sessionStorage.getItem(PENDING_CHAT_QUESTION_KEY) || '';
+                } catch {
+                  sessionQuestion = '';
+                }
+                return sessionQuestion;
+              })()}
+              onInitialQuestionUsed={() => {
+                setInitialAssistantQuestion('');
+                try {
+                  sessionStorage.removeItem(PENDING_CHAT_QUESTION_KEY);
+                } catch {
+                  // Ignore sessionStorage errors
+                }
+              }}
+              fullscreen
+            />
           </div>
         ) : !selectedTool ? (
-          /* Study Tool Selection */
-          <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleBack}
-                className="text-sm text-academic hover:underline flex items-center gap-1"
-              >
-                ← {t('back')}
-              </button>
-              <span className="text-sm font-medium text-foreground">
-                {t(selectedSubject)}
-              </span>
-            </div>
-            
-            <h2 className="text-lg font-medium text-center text-muted-foreground">
-              {t('selectStudyTool')}
-            </h2>
-            
+          <div className="mx-auto max-w-3xl animate-fade-in">
+            <StudyTrail steps={[t('preclinical'), t(selectedSubject!)]} onBack={handleBack} />
+            <h2 className="type-eyebrow mb-3">{t('selectStudyTool')}</h2>
             <StudyToolSelector
               selectedTool={selectedTool}
-              onSelectTool={setSelectedTool}
+              onSelectTool={handleSelectTool}
               variant="preclinical"
             />
           </div>
         ) : (
-          /* Active Study Tool */
-          <div className="max-w-3xl mx-auto space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleBack}
-                className="text-sm text-academic hover:underline flex items-center gap-1"
-              >
-                ← {t('back')}
-              </button>
-              <span className="text-sm font-medium text-foreground">
-                {t(selectedSubject)}
-              </span>
-            </div>
-            
+          <div className="mx-auto max-w-3xl animate-fade-in">
+            <StudyTrail
+              steps={[t('preclinical'), t(selectedSubject!)]}
+              onBack={handleBack}
+            />
             {renderStudyTool()}
           </div>
         )}

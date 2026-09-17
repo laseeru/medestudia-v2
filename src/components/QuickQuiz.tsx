@@ -3,6 +3,7 @@ import { Play, CheckCircle, XCircle, RotateCcw, Trophy, AlertCircle } from 'luci
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
 import { useScoreTracking } from '@/hooks/useScoreTracking';
+import { useRecordAnswer } from '@/features/study-history/useStudyHistory';
 import { callAI, type QuizResponse, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,6 +13,16 @@ interface QuickQuizProps {
   mode: 'preclinical' | 'clinical-study';
   variant?: 'preclinical' | 'clinical';
   questionCount?: number;
+  /**
+   * Set when this quiz runs inside a quick session. Tags every answer event so
+   * the session summary counts only its own answers, never an MCQ from another
+   * route or a quiz in another tab.
+   */
+  sessionId?: string;
+  /** Fired once the generated questions are on screen. */
+  onQuizStarted?: () => void;
+  /** Fired when the learner reaches the end, with the real tallies. */
+  onQuizCompleted?: (result: { answered: number; correct: number }) => void;
 }
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -119,10 +130,19 @@ const placeholderExamples: Record<string, { es: string; en: string }> = {
 };
 
 
-const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclinical', questionCount = 5 }) => {
+const QuickQuiz: React.FC<QuickQuizProps> = ({
+  subject,
+  mode,
+  variant = 'preclinical',
+  questionCount = 5,
+  sessionId,
+  onQuizStarted,
+  onQuizCompleted,
+}) => {
   const { t, language } = useLanguage();
   const { updateStatus } = useAIStatus();
   const { saveResult } = useScoreTracking();
+  const recordAnswer = useRecordAnswer();
   const [topic, setTopic] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -252,6 +272,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
       setStartedAt(Date.now());
       setElapsedSeconds(0);
       setIsLoading(false);
+      onQuizStarted?.();
     } catch (err: any) {
       updateStatus(false);
       const errorMessage = err.message || (language === 'es'
@@ -268,6 +289,25 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
     const newAnswers = [...answers];
     newAnswers[currentIndex] = index;
     setAnswers(newAnswers);
+
+    // Log the answer for the weekly summary; wrong ones also open an entry in
+    // the error notebook (deduplicated by normalised question text).
+    const q = questions[currentIndex];
+    if (q) {
+      recordAnswer({
+        correct: index === q.correctIndex,
+        pathway: mode === 'clinical-study' ? 'clinical' : 'preclinical',
+        subject,
+        sourceTool: 'quiz',
+        question: q.question,
+        options: q.options,
+        selectedAnswer: q.options[index],
+        correctAnswer: q.options[q.correctIndex],
+        explanation: q.explanation,
+        topic: topic.trim() || undefined,
+        sessionId,
+      });
+    }
   };
 
   const handleNext = () => {
@@ -283,7 +323,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
     const score = answers.reduce((acc, ans, idx) => {
       return acc + (ans === questions[idx].correctIndex ? 1 : 0);
     }, 0);
-    
+
     saveResult({
       subject,
       mode: mode === 'clinical-study' ? 'clinical-study' : 'preclinical',
@@ -291,8 +331,13 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({ subject, mode, variant = 'preclin
       totalQuestions: questions.length,
       difficulty,
     });
-    
+
     setIsFinished(true);
+    // Report the real tallies rather than letting a parent infer them.
+    onQuizCompleted?.({
+      answered: answers.filter((a) => a !== null).length,
+      correct: score,
+    });
   };
 
   const handleRestart = () => {

@@ -5,7 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#0f766e" />
+
+    <!-- Fonts load without blocking first paint. An @import at the top of the
+         CSS forced the browser to download and parse the stylesheet before it
+         even discovered the font request, which on a slow connection delayed
+         all text. The system stack in tailwind.config renders meanwhile. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&display=swap"
+      />
+    </noscript>
+    <meta name="theme-color" content="#101725" />
     <meta name="author" content="MedEstudia" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://medestudia-v2.vercel.app" />

@@ -1,25 +1,31 @@
 import React, { useState } from 'react';
-import { 
-  Heart, 
-  Syringe, 
-  Baby, 
-  Users, 
+import { useSearchParams } from 'react-router-dom';
+import {
+  Heart,
+  Syringe,
+  Baby,
+  Users,
   Stethoscope,
   Activity,
   Wind,
   CircleDot,
   Brain,
-  Droplets
+  Droplets,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PageHeader from '@/components/PageHeader';
+import StudyTrail from '@/components/StudyTrail';
+import EducationalNote from '@/components/EducationalNote';
 import SubjectTile from '@/components/SubjectTile';
 import StudyToolSelector, { StudyTool } from '@/components/StudyToolSelector';
 import MCQGenerator from '@/components/MCQGenerator';
 import QuickQuiz from '@/components/QuickQuiz';
 import TopicExplainer from '@/components/TopicExplainer';
 import ScoreStats from '@/components/ScoreStats';
+import { useRecordRecentStudy } from '@/features/study-history/useStudyHistory';
+import { buildStudyRoute } from '@/features/study-history/recentStudy';
 
 const rotations = [
   { key: 'internalMedicine', icon: Heart },
@@ -38,11 +44,33 @@ const systems = [
   { key: 'renal', icon: Droplets },
 ];
 
+const ROTATION_KEYS = new Set(rotations.map((r) => r.key));
+const SYSTEM_KEYS = new Set(systems.map((s) => s.key));
+const TOOL_KEYS = new Set<StudyTool>(['mcq', 'quiz', 'explain', 'stats']);
+
 const ClinicalStudy: React.FC = () => {
   const { t } = useLanguage();
-  const [selectedRotation, setSelectedRotation] = useState<string | null>(null);
-  const [selectedSystem, setSelectedSystem] = useState<string | null>(null);
-  const [selectedTool, setSelectedTool] = useState<StudyTool | null>(null);
+  const [searchParams] = useSearchParams();
+  const recordRecentStudy = useRecordRecentStudy();
+
+  // Restored from the URL so "continue", bookmarks and back all agree.
+  const initialRotation = (() => {
+    const rotation = searchParams.get('rotation');
+    return rotation && ROTATION_KEYS.has(rotation) ? rotation : null;
+  })();
+  const initialSystem = (() => {
+    const system = searchParams.get('system');
+    return initialRotation && system && SYSTEM_KEYS.has(system) ? system : null;
+  })();
+
+  const [selectedRotation, setSelectedRotation] = useState<string | null>(initialRotation);
+  const [selectedSystem, setSelectedSystem] = useState<string | null>(initialSystem);
+  const [selectedTool, setSelectedTool] = useState<StudyTool | null>(() => {
+    const tool = searchParams.get('tool') as StudyTool | null;
+    // A tool needs a full rotation + system selection behind it to be meaningful.
+    if (!initialRotation || !initialSystem) return null;
+    return tool && TOOL_KEYS.has(tool) ? tool : null;
+  });
 
   const handleBack = () => {
     if (selectedTool) {
@@ -61,9 +89,36 @@ const ClinicalStudy: React.FC = () => {
     return t(selectedRotation!);
   };
 
+  /** Breadcrumb steps for the current depth, outermost first. */
+  const trailSteps = () => {
+    const steps = [t('clinicalStudy')];
+    if (selectedRotation) steps.push(t(selectedRotation));
+    if (selectedSystem) steps.push(t(selectedSystem));
+    return steps;
+  };
+
+  /** Selecting a tool is the first moment the learner is actually studying. */
+  const handleSelectTool = (tool: StudyTool) => {
+    setSelectedTool(tool);
+    if (!selectedRotation || !selectedSystem) return;
+    recordRecentStudy({
+      pathway: 'clinical',
+      rotation: selectedRotation,
+      system: selectedSystem,
+      tool,
+      displayLabel: `${t(selectedRotation)} · ${t(selectedSystem)}`,
+      route: buildStudyRoute({
+        pathway: 'clinical',
+        rotation: selectedRotation,
+        system: selectedSystem,
+        tool,
+      }),
+    });
+  };
+
   const renderStudyTool = () => {
     const subject = getSubjectLabel();
-    
+
     switch (selectedTool) {
       case 'mcq':
         return <MCQGenerator subject={subject} variant="clinical" />;
@@ -81,67 +136,46 @@ const ClinicalStudy: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-      
-      <main className="flex-1 container py-8 md:py-12">
-        {/* Title */}
-        <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-2">
-            {t('clinicalStudy')}
-          </h1>
-          <p className="text-muted-foreground">
-            {t('clinicalStudyDesc')}
-          </p>
-        </div>
 
-        {/* Educational Badge */}
-        <div className="max-w-3xl mx-auto mb-8 flex justify-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border text-xs text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-            {t('educationalModeBanner')}
-          </span>
-        </div>
+      <main className="container flex-1 py-6 sm:py-8">
+        {!selectedRotation && (
+          <PageHeader
+            eyebrow={t('clinical')}
+            title={t('clinicalStudy')}
+            description={t('clinicalStudyDesc')}
+            note={<EducationalNote variant="full" />}
+          />
+        )}
 
         {!selectedRotation ? (
-          /* Rotations Grid */
-          <div className="animate-fade-in">
-            <h2 className="text-lg font-medium text-center text-muted-foreground mb-6">
-              Rotaciones Clínicas
+          <section aria-labelledby="rotaciones" className="animate-fade-in">
+            <h2 id="rotaciones" className="type-section-title">
+              {t('rotationsSection')}
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-4xl mx-auto">
+            <p className="mt-1 text-sm text-muted-foreground">{t('rotationsSectionDesc')}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {rotations.map((rotation) => (
                 <SubjectTile
                   key={rotation.key}
                   title={t(rotation.key)}
-                  icon={<rotation.icon className="h-6 w-6" />}
+                  icon={<rotation.icon className="h-4 w-4" />}
                   onClick={() => setSelectedRotation(rotation.key)}
                   variant="clinical"
                 />
               ))}
             </div>
-          </div>
+          </section>
         ) : !selectedSystem ? (
-          /* Systems Grid */
-          <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleBack}
-                className="text-sm text-academic hover:underline flex items-center gap-1"
-              >
-                ← {t('back')}
-              </button>
-              <span className="text-sm font-medium text-foreground">
-                {t(selectedRotation)}
-              </span>
-            </div>
-            <h2 className="text-lg font-medium text-center text-muted-foreground">
-              Sistemas / Áreas
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="animate-fade-in">
+            <StudyTrail steps={trailSteps()} onBack={handleBack} />
+            <h2 className="type-section-title">{t('systemsSection')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t('systemsSectionDesc')}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {systems.map((system) => (
                 <SubjectTile
                   key={system.key}
                   title={t(system.key)}
-                  icon={<system.icon className="h-6 w-6" />}
+                  icon={<system.icon className="h-4 w-4" />}
                   onClick={() => setSelectedSystem(system.key)}
                   variant="clinical"
                 />
@@ -149,45 +183,18 @@ const ClinicalStudy: React.FC = () => {
             </div>
           </div>
         ) : !selectedTool ? (
-          /* Study Tool Selection */
-          <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleBack}
-                className="text-sm text-academic hover:underline flex items-center gap-1"
-              >
-                ← {t('back')}
-              </button>
-              <span className="text-sm font-medium text-foreground">
-                {getSubjectLabel()}
-              </span>
-            </div>
-            
-            <h2 className="text-lg font-medium text-center text-muted-foreground">
-              {t('selectStudyTool')}
-            </h2>
-            
+          <div className="mx-auto max-w-3xl animate-fade-in">
+            <StudyTrail steps={trailSteps()} onBack={handleBack} />
+            <h2 className="type-eyebrow mb-3">{t('selectStudyTool')}</h2>
             <StudyToolSelector
               selectedTool={selectedTool}
-              onSelectTool={setSelectedTool}
+              onSelectTool={handleSelectTool}
               variant="clinical"
             />
           </div>
         ) : (
-          /* Active Study Tool */
-          <div className="max-w-3xl mx-auto space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleBack}
-                className="text-sm text-academic hover:underline flex items-center gap-1"
-              >
-                ← {t('back')}
-              </button>
-              <span className="text-sm font-medium text-foreground">
-                {getSubjectLabel()}
-              </span>
-            </div>
-            
+          <div className="mx-auto max-w-3xl animate-fade-in">
+            <StudyTrail steps={trailSteps()} onBack={handleBack} />
             {renderStudyTool()}
           </div>
         )}
