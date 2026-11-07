@@ -3,7 +3,8 @@ import { RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRecordAnswer } from '@/features/study-history/useStudyHistory';
 import { useAIStatus } from '@/contexts/AIStatusContext';
-import { callAI, type MCQResponse, isErrorResponse } from '@/lib/aiClient';
+import { callAI, type MCQResponse, type SourceRef, isErrorResponse } from '@/lib/aiClient';
+import { SourcesList } from '@/components/SourcesList';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,8 @@ interface MCQuestion {
   options: string[];
   correctIndex: number;
   explanation: string;
+  grounded?: boolean;
+  sources?: SourceRef[];
 }
 
 // Context-aware placeholder examples
@@ -120,6 +123,8 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
         options: mcq.options,
         correctIndex: mcq.correctIndex,
         explanation: mcq.explanation,
+        grounded: mcq.grounded,
+        sources: mcq.sources,
       });
       setHasStartedSession(true);
       setQuestionCount((prev) => prev + 1);
@@ -270,6 +275,7 @@ const MCQGenerator: React.FC<MCQGeneratorProps> = ({ subject, variant = 'preclin
             <div className="p-4 bg-muted rounded-lg animate-fade-in">
               <p className="text-sm font-medium text-foreground mb-2">{t('explanation')}</p>
               <p className="text-sm text-muted-foreground">{question.explanation}</p>
+              <SourcesList grounded={question.grounded} sources={question.sources} language={language} />
             </div>
           )}
         </div>

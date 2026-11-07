@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Search, BookOpen, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
-import { callAI, type ExplainResponse, isErrorResponse } from '@/lib/aiClient';
+import { callAI, type ExplainResponse, type SourceRef, isErrorResponse } from '@/lib/aiClient';
+import { SourcesList } from '@/components/SourcesList';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,8 @@ interface Explanation {
   keyFeatures: string[];
   diagnosticOverview?: string;
   lowResourceConsiderations?: string;
+  grounded?: boolean;
+  sources?: SourceRef[];
 }
 
 // Context-aware placeholder examples
@@ -107,6 +110,8 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({
         keyFeatures: explain.keyFeatures || [],
         diagnosticOverview: explain.diagnosis || explain.managementBasics,
         lowResourceConsiderations: explain.lowResourceConsiderations,
+        grounded: explain.grounded,
+        sources: explain.sources,
       });
 
       updateStatus(true);
@@ -231,6 +236,8 @@ const TopicExplainer: React.FC<TopicExplainerProps> = ({
               </section>
             )}
           </div>
+
+          <SourcesList className="mt-6" grounded={explanation.grounded} sources={explanation.sources} language={language} />
 
           <p className="mt-6 border-t border-border pt-3 text-xs text-muted-foreground">
             {t('representativeContent')}

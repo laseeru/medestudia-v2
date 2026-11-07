@@ -2,8 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, AlertCircle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
-import { callAI, callAIStream, type GuidelinesResponse, type ReflectResponse, isErrorResponse } from '@/lib/aiClient';
+import { callAI, callAIStream, type GuidelinesResponse, type ReflectResponse, type SourceRef, isErrorResponse } from '@/lib/aiClient';
 import { Button } from '@/components/ui/button';
+import { SourcesList } from '@/components/SourcesList';
+import { applyCitations } from '@/lib/citations';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -13,6 +15,9 @@ interface Message {
   error?: boolean;
   retryable?: boolean;
   learningFlow?: LearningFlow;
+  grounded?: boolean;
+  sources?: SourceRef[];
+  language?: 'es' | 'en';
 }
 
 interface MessageGroup {
@@ -380,7 +385,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
           }).catch(() => null);
           if (!isErrorResponse(coachResponse) && coachResponse.type === 'coach') {
             const followupContent = `${detectedLanguage === 'es' ? '📌 Pista' : '📌 Hint'}\n${coachResponse.hint}\n\n${detectedLanguage === 'es' ? '📖 Explicación' : '📖 Explanation'}\n${coachResponse.explanation}`;
-            setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: followupContent }]);
+            setMessages((prev) => [...prev, {
+              id: (Date.now() + 1).toString(), role: 'assistant', content: followupContent,
+              grounded: coachResponse.grounded, sources: coachResponse.sources, language: detectedLanguage,
+            }]);
             lastExplanationRef.current = coachResponse.explanation;
             updateStatus(true);
             setIsTyping(false);
@@ -414,12 +422,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
           },
         ]);
 
-        await callAIStream(request, (chunk: string) => {
-          setMessages((prev) =>
-            prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: msg.content + chunk } : msg)),
-          );
-          scrollToBottom();
-        });
+        await callAIStream(
+          request,
+          (chunk: string) => {
+            setMessages((prev) =>
+              prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, content: msg.content + chunk } : msg)),
+            );
+            scrollToBottom();
+          },
+          (meta) => {
+            setMessages((prev) =>
+              prev.map((msg) => {
+                if (msg.id !== assistantMessageId) return msg;
+                if (meta.sources) return { ...msg, grounded: true, sources: meta.sources, language: detectedLanguage };
+                if (meta.citations) return { ...msg, sources: applyCitations(msg.sources, meta.citations) };
+                if (meta.grounded === false) return { ...msg, grounded: false, language: detectedLanguage };
+                return msg;
+              }),
+            );
+          },
+        );
 
         if (apiMode === 'clinico_estudio') {
           const note = detectedLanguage === 'es'
@@ -469,7 +491,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
         responseContent += `\n\n*${guides.sourceNote}*`;
       }
 
-      setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: responseContent }]);
+      setMessages((prev) => [...prev, {
+        id: (Date.now() + 1).toString(), role: 'assistant', content: responseContent,
+        grounded: guides.grounded, sources: guides.sources, language: detectedLanguage,
+      }]);
       setIsTyping(false);
     } catch {
       updateStatus(false);
@@ -782,6 +807,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ mode, subject, initialQue
                   ) : (
                     <div className="whitespace-pre-wrap">{message.content}</div>
                   )}
+
+                  {group.role === 'assistant' && !message.error &&
+                    (!message.learningFlow || message.learningFlow.currentStage === 'explanation') && (
+                      <SourcesList
+                        grounded={message.grounded}
+                        sources={message.sources}
+                        language={message.language ?? 'es'}
+                      />
+                    )}
 
                   {message.error && message.retryable && (
                     <div className="mt-3 pt-3 border-t border-amber-300/30 dark:border-amber-500/20">

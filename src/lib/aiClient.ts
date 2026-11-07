@@ -26,14 +26,32 @@ export interface AIRequest {
   context?: AIContext;
 }
 
+/** A textbook passage retrieved for a response (see api/_lib/retrieval.ts). */
+export interface SourceRef {
+  label: string;          // "S1" — the marker used inline in the text, e.g. [S1]
+  title: string;
+  section: string | null;
+  chunkId: string;
+  similarity: number;
+  excerpt: string;
+  cited: boolean;
+}
+
+/** Present on every content-generating response. */
+export interface Grounding {
+  grounded?: boolean;
+  sources?: SourceRef[];
+  removedCitations?: number;
+}
+
 // Response types
-export interface ChatResponse {
+export interface ChatResponse extends Grounding {
   type: 'chat';
   answer: string;
   note?: string;
 }
 
-export interface MCQResponse {
+export interface MCQResponse extends Grounding {
   type: 'mcq';
   question: string;
   options: string[];
@@ -42,7 +60,7 @@ export interface MCQResponse {
   difficulty: Difficulty;
 }
 
-export interface QuizResponse {
+export interface QuizResponse extends Grounding {
   type: 'quiz';
   questions: Array<{
     question: string;
@@ -52,7 +70,7 @@ export interface QuizResponse {
   }>;
 }
 
-export interface ExplainResponse {
+export interface ExplainResponse extends Grounding {
   type: 'explain';
   definition: string;
   keyFeatures: string[];
@@ -61,7 +79,7 @@ export interface ExplainResponse {
   lowResourceConsiderations?: string;
 }
 
-export interface GuidelinesResponse {
+export interface GuidelinesResponse extends Grounding {
   type: 'guides';
   steps: Array<{
     title: string;
@@ -76,7 +94,7 @@ export interface ReflectResponse {
   prompt: string;
 }
 
-export interface CoachResponse {
+export interface CoachResponse extends Grounding {
   type: 'coach';
   hint: string;
   explanation: string;
@@ -150,9 +168,16 @@ export function isErrorResponse(response: AIResponse): response is ErrorResponse
  * @returns Promise that resolves when streaming is complete
  * @throws Error if the request fails or returns an error response
  */
+export interface StreamMeta {
+  grounded?: boolean;        // false = retrieval ran but found nothing relevant
+  sources?: SourceRef[];     // sent once, before the text
+  citations?: string[];      // labels actually cited, sent once, after the text
+}
+
 export async function callAIStream(
   request: AIRequest,
-  onChunk: (content: string) => void
+  onChunk: (content: string) => void,
+  onMeta?: (meta: StreamMeta) => void,
 ): Promise<void> {
   try {
     const response = await fetch('/api/ai', {
@@ -204,6 +229,8 @@ export async function callAIStream(
               const json = JSON.parse(data);
               if (json.content) {
                 onChunk(json.content);
+              } else if ('grounded' in json || json.sources || json.citations) {
+                onMeta?.({ grounded: json.grounded, sources: json.sources, citations: json.citations });
               } else if (json.error) {
                 throw new Error(json.error);
               }
@@ -225,6 +252,8 @@ export async function callAIStream(
                 const json = JSON.parse(data);
                 if (json.content) {
                   onChunk(json.content);
+                } else if ('grounded' in json || json.sources || json.citations) {
+                  onMeta?.({ grounded: json.grounded, sources: json.sources, citations: json.citations });
                 }
               } catch (e) {
                 // Skip invalid JSON
@@ -242,6 +271,7 @@ export async function callAIStream(
       }
       // For non-streaming, call onChunk with full content
       if (data.type === 'chat') {
+        if (data.grounded !== undefined) onMeta?.({ grounded: data.grounded, sources: data.sources });
         onChunk(data.answer);
       }
     }

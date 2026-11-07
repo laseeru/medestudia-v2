@@ -1,3 +1,16 @@
+import {
+  retrieve,
+  retrievalConfigured,
+  formatPassages,
+  groundingInstruction,
+  citedLabels,
+  stripInvalidMarkers,
+  cleanMarkersDeep,
+  buildSourceRefs,
+  type Passage,
+  type SourceRef,
+} from './_lib/retrieval.js';
+
 // Vercel serverless function types (inline to avoid dependency)
 interface VercelRequest {
   method?: string;
@@ -23,6 +36,7 @@ declare const process: {
     AZURE_FOUNDRY_API_KEY?: string;
     AZURE_FOUNDRY_ENDPOINT?: string;
     AI_PROVIDER?: string;
+    [key: string]: string | undefined;
   };
 };
 
@@ -33,6 +47,8 @@ interface AIRequest {
   language: 'es' | 'en';
   input: string;
   session_id?: string;
+  /** Set false to skip retrieval (experiment condition C0/C1). Default: on when configured. */
+  retrieval?: boolean;
   context?: {
     subject?: string;
     rotation?: string;
@@ -108,6 +124,40 @@ interface ClassifyResponse {
 }
 
 type AIResponse = ChatResponse | MCQResponse | QuizResponse | ExplainResponse | GuidelinesResponse | ReflectResponse | CoachResponse | ClassifyResponse;
+
+/** Grounding metadata attached to every content-generating response. */
+interface GroundingInfo {
+  grounded: boolean;          // true when textbook passages were supplied to the model
+  sources: SourceRef[];       // retrieved passages, each flagged cited / not cited
+  removedCitations?: number;  // markers the model invented that pointed to no passage
+}
+
+// Tools whose output is medical content and therefore gets retrieval.
+const GROUNDED_TOOLS = new Set<AIRequest['tool']>(['chat', 'mcq', 'quiz', 'explain', 'guides', 'coach']);
+const RETRIEVAL_K: Partial<Record<AIRequest['tool'], number>> = { quiz: 8 };
+const DEFAULT_RETRIEVAL_K = 5;
+const CITATION_TOKEN_ALLOWANCE = 150;
+
+function buildRetrievalQuery(req: AIRequest): string {
+  const ctx = req.context || {};
+  const subject = ctx.subject || ctx.rotation || ctx.system || '';
+  const main = req.tool === 'mcq' || req.tool === 'quiz' || req.tool === 'explain'
+    ? ctx.topic || req.input
+    : req.input;
+  return [main, subject].filter(Boolean).join(' — ').slice(0, 1000);
+}
+
+function sourceNoteFor(grounded: boolean, sources: SourceRef[], language: AIRequest['language']): string {
+  const titles = [...new Set(sources.filter((s) => s.cited).map((s) => s.title))];
+  if (language === 'es') {
+    return grounded && titles.length
+      ? `Basado en fragmentos de: ${titles.join('; ')}. Contenido educativo; verifica siempre con las guías oficiales vigentes.`
+      : 'Contenido educativo generado por IA sin fuentes verificables de los libros de texto. Verifica con las guías oficiales vigentes.';
+  }
+  return grounded && titles.length
+    ? `Based on passages from: ${titles.join('; ')}. Educational content; always verify against current official guidelines.`
+    : 'AI-generated educational content without verifiable textbook sources. Verify against current official guidelines.';
+}
 
 // Error response type
 interface ErrorResponse {
@@ -281,13 +331,13 @@ Respond in natural text format, structured but conversational.`;
 Proporciona información estructurada basada en guías clínicas representativas.
 Siempre referencia explícitamente el tema o condición consultada por el usuario.
 Sé cauteloso y estructurado. Prioriza protocolos paso a paso.
-IMPORTANTE: Al final de tu respuesta, incluye una nota indicando que es contenido representativo y que las guías oficiales cubanas se integrarán posteriormente mediante RAG tras aprobación institucional.
+IMPORTANTE: Al final de tu respuesta, incluye una nota breve indicando que es contenido educativo y que debe verificarse con las guías oficiales vigentes.
 Responde SOLO en formato JSON válido (sin markdown, sin código envolvente).`
         : `${baseInstructions}
 Provide structured information based on representative clinical guidelines.
 Always explicitly reference the topic or condition consulted by the user.
 Be cautious and structured. Prioritize step-by-step protocols.
-IMPORTANT: At the end of your response, include a note indicating it is representative content and that official Cuban guidelines will be integrated later via RAG after institutional approval.
+IMPORTANT: At the end of your response, include a short note stating that this is educational content and must be verified against current official guidelines.
 Respond ONLY in valid JSON format (no markdown, no wrapping code).`;
     }
   } else if (tool === 'mcq') {
@@ -392,7 +442,7 @@ Responde SOLO en formato JSON válido (sin markdown, sin código envolvente) con
     }
   ],
   "warnings": ["advertencia 1 relevante", "advertencia 2", ...],
-  "sourceNote": "Esta es información basada en guías clínicas representativas. Las guías oficiales cubanas se integrarán posteriormente mediante técnicas de recuperación aumentada de generación (RAG) tras la aprobación institucional correspondiente."
+  "sourceNote": "nota breve sobre las fuentes usadas"
 }`
       : `${baseInstructions}
 Provide a structured step-by-step clinical guideline about the consulted condition or procedure.
@@ -407,7 +457,7 @@ Respond ONLY in valid JSON format (no markdown, no wrapping code) with this exac
     }
   ],
   "warnings": ["relevant warning 1", "warning 2", ...],
-  "sourceNote": "This is information based on representative clinical guidelines. Official Cuban guidelines will be integrated later using retrieval-augmented generation (RAG) techniques after corresponding institutional approval."
+  "sourceNote": "short note on the sources used"
 }`;
   }
 }
@@ -482,8 +532,8 @@ function buildUserPrompt(req: AIRequest): string {
     
     if (req.mode === 'clinico_guias') {
       prompt += isES
-        ? `\n\nProporciona una respuesta estructurada basada en guías clínicas representativas, organizada en pasos claros con advertencias relevantes. Al final, incluye la nota sobre contenido representativo y futura integración de guías oficiales cubanas.`
-        : `\n\nProvide a structured response based on representative clinical guidelines, organized in clear steps with relevant warnings. At the end, include the note about representative content and future integration of official Cuban guidelines.`;
+        ? `\n\nProporciona una respuesta estructurada, organizada en pasos claros con advertencias relevantes. Al final, incluye la nota sobre contenido educativo y verificación con guías oficiales.`
+        : `\n\nProvide a structured response organized in clear steps with relevant warnings. At the end, include the note about educational content and verification against official guidelines.`;
     }
     prompt += isES ? `\n\n${detailInstruction}` : `\n\n${detailInstruction}`;
     
@@ -516,9 +566,9 @@ Make sure to explicitly mention "${topic}" in the definition and in each section
     // guides
     return isES
       ? `Consulta sobre guía clínica para: "${input}". ${subject ? `Contexto: ${subject}.` : ''}
-Proporciona una guía estructurada paso a paso. Menciona explícitamente "${input}" en los pasos. Incluye advertencias relevantes y la nota sobre contenido representativo.`
+Proporciona una guía estructurada paso a paso. Menciona explícitamente "${input}" en los pasos. Incluye advertencias relevantes.`
       : `Consultation about clinical guideline for: "${input}". ${subject ? `Context: ${subject}.` : ''}
-Provide a structured step-by-step guideline. Explicitly mention "${input}" in the steps. Include relevant warnings and the note about representative content.`;
+Provide a structured step-by-step guideline. Explicitly mention "${input}" in the steps. Include relevant warnings.`;
   }
 }
 
@@ -618,11 +668,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Build prompts
     const systemPrompt = buildSystemPrompt(body.tool, body.mode, body.language);
-    const userPrompt = buildUserPrompt(body);
+    let userPrompt = buildUserPrompt(body);
+
+    // ---------------------------------------------------------- retrieval
+    let passages: Passage[] = [];
+    const retrievalAttempted = GROUNDED_TOOLS.has(body.tool) && body.retrieval !== false && retrievalConfigured();
+    if (retrievalAttempted) {
+      const k = RETRIEVAL_K[body.tool] ?? DEFAULT_RETRIEVAL_K;
+      const result = await retrieve(buildRetrievalQuery(body), k);
+      if (result.error) console.warn('Retrieval failed, answering without sources:', result.error);
+      passages = result.passages;
+    }
+    const grounded = passages.length > 0;
+    const validLabels = new Set(passages.map((p) => p.label));
+    const isJsonTool = body.tool === 'guides' || body.tool === 'mcq' || body.tool === 'quiz' || body.tool === 'explain'
+      || body.tool === 'coach' || (body.tool === 'chat' && body.mode === 'clinico_guias');
+    if (grounded) {
+      userPrompt += `\n\n${groundingInstruction(body.language, isJsonTool)}\n\n${formatPassages(passages)}`;
+    }
+
+    /** Clean invented markers from the final text/JSON and build grounding metadata. */
+    const finalizeGrounding = <T,>(payload: T): { payload: T; grounding: Partial<GroundingInfo> } => {
+      // Retrieval off (not configured, or C0/C1 experiment run): add nothing.
+      if (!retrievalAttempted) return { payload, grounding: {} };
+      if (!grounded) return { payload, grounding: { grounded: false, sources: [] } };
+      const before = citedLabels(JSON.stringify(payload));
+      const cleaned = cleanMarkersDeep(payload, validLabels);
+      const cited = citedLabels(JSON.stringify(cleaned));
+      const removed = [...before].filter((l) => !validLabels.has(l)).length;
+      return {
+        payload: cleaned,
+        grounding: { grounded: true, sources: buildSourceRefs(passages, cited), ...(removed ? { removedCitations: removed } : {}) },
+      };
+    };
 
     // Determine temperature and token limit based on tool
     const temperature = body.tool === 'guides' ? GUIDELINES_TEMPERATURE : DEFAULT_TEMPERATURE;
-    const maxTokens = TOKEN_LIMITS[body.tool] || TOKEN_LIMITS.chat;
+    const maxTokens = (TOKEN_LIMITS[body.tool] || TOKEN_LIMITS.chat) + (grounded ? CITATION_TOKEN_ALLOWANCE : 0);
 
     // Enable streaming only when explicitly requested.
     // Default JSON responses are faster to integrate and easier to handle consistently.
@@ -700,6 +782,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Connection', 'keep-alive');
       res.status(200);
 
+      // Sources first, so the UI can render citation chips as text arrives.
+      if (grounded) {
+        res.write(`data: ${JSON.stringify({ grounded: true, sources: buildSourceRefs(passages, new Set()) })}\n\n`);
+      } else if (retrievalAttempted) {
+        res.write(`data: ${JSON.stringify({ grounded: false })}\n\n`);
+      }
+      let streamedText = '';
+      const finishStream = () => {
+        if (grounded) {
+          const cited = [...citedLabels(streamedText)].filter((l) => validLabels.has(l));
+          res.write(`data: ${JSON.stringify({ citations: cited })}\n\n`);
+        }
+        res.write('data: [DONE]\n\n');
+        res.end();
+      };
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -717,8 +815,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6);
               if (data === '[DONE]') {
-                res.write('data: [DONE]\n\n');
-                res.end();
+                finishStream();
                 return;
               }
 
@@ -726,6 +823,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const json = JSON.parse(data);
                 const delta = json.choices?.[0]?.delta;
                 if (delta?.content) {
+                  streamedText += delta.content;
                   res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
                 }
               } catch (e) {
@@ -746,6 +844,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   const json = JSON.parse(data);
                   const delta = json.choices?.[0]?.delta;
                   if (delta?.content) {
+                    streamedText += delta.content;
                     res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
                   }
                 } catch (e) {
@@ -756,8 +855,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
-        res.write('data: [DONE]\n\n');
-        res.end();
+        finishStream();
         return;
       } catch (error: any) {
         console.error('Streaming error:', error);
@@ -783,15 +881,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (body.tool === 'chat' && body.mode !== 'clinico_guias') {
       // For chat (non-guidelines), return as text
+      const { payload: answer, grounding } = finalizeGrounding(content);
       return res.status(200).json({
         type: 'chat',
-        answer: content,
-        note: body.mode === 'clinico_estudio' 
-          ? (body.language === 'es' 
-            ? 'Modo educativo — caso hipotético para fines de aprendizaje' 
+        answer,
+        note: body.mode === 'clinico_estudio'
+          ? (body.language === 'es'
+            ? 'Modo educativo — caso hipotético para fines de aprendizaje'
             : 'Educational mode — hypothetical case for learning purposes')
-          : undefined
-      } as ChatResponse);
+          : undefined,
+        ...grounding,
+      });
     }
     if (body.tool === 'reflect') {
       return res.status(200).json({
@@ -817,11 +917,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           raw: content.substring(0, 1000)
         } as ErrorResponse);
       }
-      return res.status(200).json({
-        type: 'coach',
+      const { payload: coach, grounding } = finalizeGrounding({
+        type: 'coach' as const,
         hint: coachParsed.hint.trim(),
         explanation: coachParsed.explanation.trim(),
-      } as CoachResponse);
+      });
+      return res.status(200).json({ ...coach, ...grounding });
     }
 
     // For all other tools, parse as JSON
@@ -871,7 +972,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     } else if (body.tool === 'guides') {
       const guides = parsedResponse as GuidelinesResponse;
-      if (!Array.isArray(guides.steps) || !Array.isArray(guides.warnings) || !guides.sourceNote) {
+      if (!Array.isArray(guides.steps) || !Array.isArray(guides.warnings)) {
         return res.status(200).json({
           type: 'error',
           error: 'Invalid guidelines structure',
@@ -880,7 +981,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    return res.status(200).json(parsedResponse);
+    const { payload: finalResponse, grounding } = finalizeGrounding(parsedResponse);
+    if (finalResponse.type === 'guides') {
+      // Source note is set by the server from what was actually retrieved and cited,
+      // never taken from the model.
+      (finalResponse as GuidelinesResponse).sourceNote = sourceNoteFor(Boolean(grounding.grounded), grounding.sources ?? [], body.language);
+    }
+    return res.status(200).json({ ...finalResponse, ...grounding });
 
   } catch (error: any) {
     console.error('Error calling DeepSeek API:', error);
