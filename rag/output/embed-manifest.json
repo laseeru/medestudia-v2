@@ -1,0 +1,13 @@
+{
+  "createdAt": "2026-11-07T14:27:24.897Z",
+  "embedModel": "text-embedding-3-small@512",
+  "corpusSha256": "26398a37875f4412c59688b08cc519f0204763056d8498dbb30c51163fda7692",
+  "totalChunks": 42841,
+  "keptChunks": 42572,
+  "skipped": {
+    "corrupt": 269,
+    "empty": 0
+  },
+  "uploadedThisRun": 22596,
+  "totalInIndex": 42572
+}

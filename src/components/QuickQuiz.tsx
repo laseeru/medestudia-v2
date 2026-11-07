@@ -4,7 +4,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAIStatus } from '@/contexts/AIStatusContext';
 import { useScoreTracking } from '@/hooks/useScoreTracking';
 import { useRecordAnswer } from '@/features/study-history/useStudyHistory';
-import { callAI, type QuizResponse, isErrorResponse } from '@/lib/aiClient';
+import { callAI, type QuizResponse, type SourceRef, isErrorResponse } from '@/lib/aiClient';
+import { SourcesList } from '@/components/SourcesList';
+import { applyCitations, citedInTexts } from '@/lib/citations';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -153,6 +155,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({
   const [isFinished, setIsFinished] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quizGrounding, setQuizGrounding] = useState<{ grounded?: boolean; sources?: SourceRef[] } | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -204,6 +207,7 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({
       const seenFromStorage = loadSeenFingerprints(historyKeyForTopic);
       const seenFingerprints = new Set(seenFromStorage);
 
+      let batchGrounding: { grounded?: boolean; sources?: SourceRef[] } | null = null;
       const fetchQuizBatch = async (avoidQuestions: string[] = []): Promise<QuizQuestion[]> => {
         const avoidText =
           avoidQuestions.length > 0
@@ -230,6 +234,10 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({
         }
 
         const quiz = response as QuizResponse;
+        // Same query (topic + subject) on every batch → same passages and labels.
+        if (quiz.grounded !== undefined && !batchGrounding) {
+          batchGrounding = { grounded: quiz.grounded, sources: quiz.sources };
+        }
         if (!quiz.questions || quiz.questions.length === 0) {
           return [];
         }
@@ -264,6 +272,17 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({
       updateStatus(true);
 
       setQuestions(quizQuestions);
+      setQuizGrounding(
+        batchGrounding
+          ? {
+              grounded: batchGrounding.grounded,
+              sources: applyCitations(
+                batchGrounding.sources,
+                citedInTexts(quizQuestions.flatMap((q) => [q.question, q.explanation, ...q.options])),
+              ),
+            }
+          : null,
+      );
       setAnswers(new Array(quizQuestions.length).fill(null));
       setCurrentIndex(0);
       setSelectedAnswer(null);
@@ -470,6 +489,10 @@ const QuickQuiz: React.FC<QuickQuizProps> = ({
             </div>
           ))}
         </div>
+
+        {quizGrounding && (
+          <SourcesList grounded={quizGrounding.grounded} sources={quizGrounding.sources} language={language} />
+        )}
 
         <Button onClick={handleRestart} className="w-full">
           <RotateCcw className="h-4 w-4 mr-2" />
