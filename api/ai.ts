@@ -136,7 +136,10 @@ interface GroundingInfo {
 const GROUNDED_TOOLS = new Set<AIRequest['tool']>(['chat', 'mcq', 'quiz', 'explain', 'guides', 'coach']);
 const RETRIEVAL_K: Partial<Record<AIRequest['tool'], number>> = { quiz: 8 };
 const DEFAULT_RETRIEVAL_K = 5;
-const CITATION_TOKEN_ALLOWANCE = 150;
+// Grounded answers need room for [S#] markers. Length is otherwise held by the
+// "summarise, don't reproduce" rule in groundingInstruction (measured 7 Nov 2026:
+// without that rule, explain answers ran 1,180–1,750+ tokens and hit the cap).
+const CITATION_TOKEN_ALLOWANCE = 350;
 
 function buildRetrievalQuery(req: AIRequest): string {
   const ctx = req.context || {};
@@ -169,19 +172,23 @@ interface ErrorResponse {
 // AI provider configuration
 const MAX_INPUT_LENGTH = 2000;
 // Tool-specific token limits for optimal performance
+// Measured 7 Nov 2026 against the current DeepSeek model (natural completion length,
+// without → with retrieval): explain 1,125–1,266 → 951–1,336; guides 1,267 → 1,352;
+// chat ~1,020; mcq ≤321; quiz(5) ≤1,011; coach ≤308. The old explain (850) and
+// guides (1,100) caps truncated JSON on most requests even before retrieval existed.
 const TOKEN_LIMITS = {
   mcq: 600,      // Short question + options + explanation
   quiz: 2500,    // 5 questions with concise explanations (~500 tokens per Q&A)
-  explain: 850,  // Structured explanation
-  chat: 950,     // Conversational responses (adaptive depth)
-  guides: 1100,  // Structured guidelines
+  explain: 1800, // Structured explanation
+  chat: 1500,    // Conversational responses (adaptive depth)
+  guides: 1900,  // Structured guidelines
   reflect: 180,  // Short guiding reflection prompt
   coach: 700,    // Hint + corrective explanation (adaptive depth)
   classify: 40,  // Single-label intent classification
 };
 const DEFAULT_TEMPERATURE = 0.7;
 const GUIDELINES_TEMPERATURE = 0.3; // Lower temp for more structured guidelines
-const AI_REQUEST_TIMEOUT_MS = 18000;
+const AI_REQUEST_TIMEOUT_MS = 30000; // longest measured answer ~11 s; leave headroom
 
 // ---------------------------------------------------------------- rate limit
 // This endpoint is unauthenticated and forwards to a metered LLM API, so
